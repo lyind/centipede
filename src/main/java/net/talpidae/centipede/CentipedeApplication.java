@@ -40,7 +40,7 @@ public class CentipedeApplication extends AbstractModule
 
     public static void main(String[] args)
     {
-        val injector = Base.initializeApp(new CentipedeApplication());
+        val injector = Base.initializeApp(args, new CentipedeApplication());
 
         val serverConfig = injector.getInstance(ServerConfig.class);
         serverConfig.setJerseyResourcePackages(resourcePackages);
