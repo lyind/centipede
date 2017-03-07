@@ -11,6 +11,7 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Gradle: javax.enterprise:cdi-api:2.0-PFD" level="project" />
     <orderEntry type="library" name="Gradle: com.squarespace.jersey2-guice:jersey2-guice-impl:1.0.6" level="project" />
+    <orderEntry type="library" name="Gradle: net.sf.jopt-simple:jopt-simple:6.0-alpha-1" level="project" />
     <orderEntry type="library" name="Gradle: org.slf4j:jul-to-slf4j:1.7.23" level="project" />
     <orderEntry type="library" name="Gradle: org.tinylog:tinylog:1.1" level="project" />
     <orderEntry type="library" name="Gradle: org.tinylog:log4j-facade:1.1" level="project" />

@@ -22,6 +22,13 @@ import com.google.inject.AbstractModule;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.talpidae.base.Base;
+import net.talpidae.base.insect.Queen;
+import net.talpidae.base.insect.SynchronousQueen;
+import net.talpidae.base.insect.config.DefaultQueenSettings;
+import net.talpidae.base.insect.config.DefaultSlaveSettings;
+import net.talpidae.base.insect.config.QueenSettings;
+import net.talpidae.base.insect.config.SlaveSettings;
+import net.talpidae.base.server.DefaultServerConfig;
 import net.talpidae.base.server.Server;
 import net.talpidae.base.server.ServerConfig;
 import net.talpidae.base.util.auth.Authenticator;
@@ -65,7 +72,10 @@ public class CentipedeApplication extends AbstractModule
     @Override
     protected void configure()
     {
-        // add additional Guice bindings here
+        bind(QueenSettings.class).to(DefaultQueenSettings.class);
+        bind(SlaveSettings.class).to(DefaultSlaveSettings.class);
+
+        bind(ServerConfig.class).to(DefaultServerConfig.class);
 
         bind(Authenticator.class).to(LocalAuthenticator.class);
         bind(SessionService.class).to(LocalSessionService.class);
