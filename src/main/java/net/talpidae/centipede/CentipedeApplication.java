@@ -17,67 +17,85 @@
 
 package net.talpidae.centipede;
 
-
-import com.google.inject.AbstractModule;
+import com.google.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import net.talpidae.base.Base;
 import net.talpidae.base.insect.Queen;
-import net.talpidae.base.insect.SynchronousQueen;
-import net.talpidae.base.insect.config.DefaultQueenSettings;
-import net.talpidae.base.insect.config.DefaultSlaveSettings;
 import net.talpidae.base.insect.config.QueenSettings;
-import net.talpidae.base.insect.config.SlaveSettings;
-import net.talpidae.base.server.DefaultServerConfig;
 import net.talpidae.base.server.Server;
 import net.talpidae.base.server.ServerConfig;
-import net.talpidae.base.util.auth.Authenticator;
-import net.talpidae.base.util.session.SessionService;
-import net.talpidae.centipede.util.auth.LocalAuthenticator;
-import net.talpidae.centipede.util.session.LocalSessionService;
+import net.talpidae.base.util.Application;
+import net.talpidae.centipede.resource.Resource;
 
+import javax.inject.Inject;
 import javax.servlet.ServletException;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import static java.lang.System.exit;
 
+
+@Singleton
 @Slf4j
-public class CentipedeApplication extends AbstractModule
+public class CentipedeApplication implements Application
 {
-    private static final String[] resourcePackages = new String[] { net.talpidae.centipede.resource.Hello.class.getPackage().getName() };
+    private static final String[] resourcePackages = new String[]{Resource.class.getPackage().getName()};
 
-    public static void main(String[] args)
+    private final ServerConfig serverConfig;
+
+    private final Server server;
+
+    private final QueenSettings queenSettings;
+
+    private final Queen queen;
+
+
+    @Inject
+    public CentipedeApplication(ServerConfig serverConfig, Server server, QueenSettings queenSettings, Queen queen)
     {
-        val injector = Base.initializeApp(args, new CentipedeApplication());
+        this.serverConfig = serverConfig;
+        this.server = server;
+        this.queenSettings = queenSettings;
+        this.queen = queen;
+    }
 
-        val serverConfig = injector.getInstance(ServerConfig.class);
+
+    @Override
+    public void run()
+    {
         serverConfig.setJerseyResourcePackages(resourcePackages);
-
-        val server = injector.getInstance(Server.class);
         try
         {
             server.start();
-            log.info("server started on {}:{}", serverConfig.getHost(), serverConfig.getPort());
 
-            log.info("POST /shutdown to stop server");
-            server.waitForStop();
+            val bindAddress = new InetSocketAddress(serverConfig.getHost(), serverConfig.getPort());
+            log.info("server started on {}", bindAddress.toString());
+
+            queenSettings.setBindAddress(bindAddress);
+            try
+            {
+                queen.run();
+
+                log.info("POST /shutdown to stop server");
+                server.waitForStop();
+            }
+            finally
+            {
+                try
+                {
+                    queen.close();
+                }
+                catch (IOException e)
+                {
+                    // never happens
+                }
+            }
         }
         catch (ServletException e)
         {
             log.error("failed to start server: {}", e.getMessage());
             exit(1);
         }
-    }
-
-
-    @Override
-    protected void configure()
-    {
-        bind(QueenSettings.class).to(DefaultQueenSettings.class);
-        bind(SlaveSettings.class).to(DefaultSlaveSettings.class);
-
-        bind(ServerConfig.class).to(DefaultServerConfig.class);
-
-        bind(Authenticator.class).to(LocalAuthenticator.class);
-        bind(SessionService.class).to(LocalSessionService.class);
     }
 }

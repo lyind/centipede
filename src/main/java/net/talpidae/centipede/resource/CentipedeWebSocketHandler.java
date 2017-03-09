@@ -17,6 +17,7 @@
 
 package net.talpidae.centipede.resource;
 
+import com.google.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import net.talpidae.base.server.WebSocketHandler;
 import net.talpidae.base.util.session.SessionHolder;
@@ -28,6 +29,7 @@ import java.io.IOException;
 
 
 @Slf4j
+@Singleton
 public class CentipedeWebSocketHandler implements WebSocketHandler
 {
     private final SessionHolder sessionHolder;
@@ -47,12 +49,24 @@ public class CentipedeWebSocketHandler implements WebSocketHandler
     @Override
     public void message(String message, Session session)
     {
-        log.info("raw()", message, session);
+        log.info("message(): {}", message);
+    }
+
+    @Override
+    public void message(byte[] bytes, boolean done, Session session)
+    {
+        log.info("message(): {}, done={}", bytes, done);
+    }
+
+    @Override
+    public void error(Throwable throwable, Session session)
+    {
+        log.info("error(): {}", throwable);
     }
 
     @Override
     public void close(CloseReason closeReason, Session session)
     {
-        log.info("close()", closeReason, session);
+        log.info("close(): {}", closeReason);
     }
 }
