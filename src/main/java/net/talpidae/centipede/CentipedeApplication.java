@@ -77,8 +77,7 @@ public class CentipedeApplication implements Application
             {
                 queen.run();
 
-                log.info("POST /shutdown to stop server");
-                server.waitForStop();
+                server.waitForShutdown();
             }
             finally
             {
