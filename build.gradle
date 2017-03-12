@@ -33,9 +33,6 @@ task printClasspath {
 }
 
 dependencies {
-    //compile 'org.projectlombok:lombok:1.16.14'  // don't forget!
-    //apt 'org.projectlombok:lombok:1.16.14'  // don't forget!
-
     compileOnly "org.projectlombok:lombok:1.16.14"
 
     compile 'org.xerial:sqlite-jdbc:3.16.1'
