@@ -33,7 +33,7 @@ task printClasspath {
 }
 
 dependencies {
-    compileOnly "org.projectlombok:lombok:1.16.14"
+    compileOnly "org.projectlombok:lombok:1.16.16"
 
     compile 'org.xerial:sqlite-jdbc:3.16.1'
     compile 'org.jdbi:jdbi3-parent:3.0.0-beta0'
