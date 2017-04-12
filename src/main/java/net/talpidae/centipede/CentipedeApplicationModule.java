@@ -52,14 +52,6 @@ public class CentipedeApplicationModule extends AbstractModule
     {
         bind(Application.class).to(CentipedeApplication.class);
 
-        bind(QueenSettings.class).to(DefaultQueenSettings.class);
-        bind(Queen.class).to(AsyncQueen.class);
-
-        bind(SlaveSettings.class).to(DefaultSlaveSettings.class);
-        bind(Slave.class).to(SyncSlave.class);  // we don't use it
-
-        bind(ServerConfig.class).to(DefaultServerConfig.class);
-
         bind(Authenticator.class).to(LocalAuthenticator.class);
         bind(SessionService.class).to(LocalSessionService.class);
     }
