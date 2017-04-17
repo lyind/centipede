@@ -49,5 +49,7 @@ public class CentipedeApplicationModule extends AbstractModule
 
         bind(Authenticator.class).to(LocalAuthenticator.class);
         bind(SessionService.class).to(LocalSessionService.class);
+
+        bind(CentipedeLogic.class);
     }
 }

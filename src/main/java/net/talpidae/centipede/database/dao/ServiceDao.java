@@ -18,17 +18,19 @@
 package net.talpidae.centipede.database.dao;
 
 import net.talpidae.centipede.bean.service.Service;
+import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindBean;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 
+@RegisterConstructorMapper(Service.class)
 public interface ServiceDao
 {
     @SqlQuery("SELECT *\n"
             + "FROM service s1\n"
-            + "WHERE NOT isRetired\n"
+            + "WHERE NOT retired\n"
             + "  AND s1.generation = (\n"
             + "    SELECT MAX(s2.generation)\n"
             + "    FROM service s2\n"
@@ -39,7 +41,7 @@ public interface ServiceDao
 
     @SqlQuery("SELECT *\n"
             + "FROM service s1\n"
-            + "WHERE NOT isRetired\n"
+            + "WHERE NOT retired\n"
             + "  AND s1.name = :name\n"
             + "  AND s1.generation = (\n"
             + "    SELECT MAX(s2.generation)\n"
@@ -51,34 +53,34 @@ public interface ServiceDao
     @SqlUpdate("INSERT INTO service (\n"
             + "  generation,\n"
             + "  name,\n"
-            + "  isRetired,\n"
-            + "  ts,\n"
-            + "  kind,\n"
+            + "  retired,\n"
             + "  state,\n"
             + "  targetState,\n"
+            + "  kind,\n"
             + "  vmArguments,\n"
             + "  image,\n"
             + "  arguments,\n"
             + "  route,\n"
             + "  proxyPathPrefix,\n"
             + "  pid,\n"
-            + "  socketAddress\n"
+            + "  host,\n"
+            + "  port\n"
             + ")\n"
             + "  VALUES (\n"
             + "    :generation + 1,\n"
             + "    :name,\n"
-            + "    :isRetired,\n"
-            + "    'now',\n"
-            + "    :kind,\n"
+            + "    :retired,\n"
             + "    :state,\n"
             + "    :targetState,\n"
+            + "    :kind,\n"
             + "    :vmArguments,\n"
             + "    :image,\n"
             + "    :arguments,\n"
             + "    :route,\n"
             + "    :proxyPathPrefix,\n"
             + "    :pid,\n"
-            + "    :socketAddress\n"
+            + "    :host,\n"
+            + "    :port\n"
             + "  )\n")
     void insert(@BindBean Service service);
 }

@@ -20,7 +20,6 @@ package net.talpidae.centipede.bean.service;
 import lombok.*;
 import org.jdbi.v3.core.mapper.reflect.ColumnName;
 
-import java.net.InetSocketAddress;
 import java.time.OffsetDateTime;
 
 
@@ -43,7 +42,7 @@ public class Service
      * Is this service instance deleted (ie. set end-of-life)?
      */
     @Builder.Default
-    private final boolean isRetired;
+    private final boolean retired;
 
     /**
      * Creation timestamp of this record (ie. last modified timestamp).
@@ -69,7 +68,6 @@ public class Service
      * Service implementation type.
      */
     @Builder.Default
-    @NonNull
     private final Kind kind;
 
     /**
@@ -103,11 +101,13 @@ public class Service
 
     private final Long pid;
 
-    private final InetSocketAddress socketAddress;
+    private final String host;
+
+    private final Integer port;
 
 
     public Service(@ColumnName("generation") int generation,
-                   @ColumnName("isRetired") boolean isRetired,
+                   @ColumnName("retired") boolean retired,
                    @ColumnName("ts") OffsetDateTime ts,
                    @ColumnName("name") String name,
                    @ColumnName("state") State state,
@@ -119,10 +119,11 @@ public class Service
                    @ColumnName("route") String route,
                    @ColumnName("proxyPathPrefix") String proxyPathPrefix,
                    @ColumnName("pid") Long pid,
-                   @ColumnName("socketAddress") InetSocketAddress socketAddress)
+                   @ColumnName("host") String host,
+                   @ColumnName("port") Integer port)
     {
         this.generation = generation;
-        this.isRetired = isRetired;
+        this.retired = retired;
         this.ts = ts;
         this.name = name;
         this.state = state;
@@ -134,6 +135,7 @@ public class Service
         this.route = route;
         this.proxyPathPrefix = proxyPathPrefix;
         this.pid = pid;
-        this.socketAddress = socketAddress;
+        this.host = host;
+        this.port = port;
     }
 }

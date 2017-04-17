@@ -13,16 +13,12 @@ public class CentipedeSyncQueen extends SyncQueen
 {
     private final EventBus eventBus;
 
-    private final CentipedeLogic centipedeLogic;
-
     @Inject
-    public CentipedeSyncQueen(QueenSettings settings, EventBus eventBus, CentipedeLogic centipedeLogic)
+    public CentipedeSyncQueen(QueenSettings settings, EventBus eventBus)
     {
         super(settings);
 
         this.eventBus = eventBus;
-        this.eventBus.register(this);
-        this.centipedeLogic = centipedeLogic;
     }
 
 

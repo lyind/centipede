@@ -17,7 +17,9 @@
 
 package net.talpidae.centipede;
 
+import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+import com.google.inject.Singleton;
 import lombok.val;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
@@ -27,15 +29,21 @@ import net.talpidae.centipede.event.NewMapping;
 import javax.inject.Inject;
 
 
+@Singleton
 public class CentipedeLogic
 {
     private final CentipedeRepository repository;
 
+    private final EventBus eventBus;
+
 
     @Inject
-    public CentipedeLogic(CentipedeRepository repository)
+    public CentipedeLogic(CentipedeRepository repository, EventBus eventBus)
     {
         this.repository = repository;
+        this.eventBus = eventBus;
+
+        eventBus.register(this);
     }
 
 
@@ -55,7 +63,8 @@ public class CentipedeLogic
                     .state(State.UP)
                     .targetState(State.UNKNOWN)
                     .route(mapping.getRoute())
-                    .socketAddress(mapping.getSocketAddress())
+                    .host(mapping.getHost())
+                    .port(mapping.getPort())
                     .build();
 
             repository.createService(newService);

@@ -49,14 +49,17 @@ public class CentipedeApplication implements Application
 
     private final Queen queen;
 
+    private final CentipedeLogic centipedeLogic;
+
 
     @Inject
-    public CentipedeApplication(ServerConfig serverConfig, Server server, QueenSettings queenSettings, Queen queen)
+    public CentipedeApplication(ServerConfig serverConfig, Server server, QueenSettings queenSettings, Queen queen, CentipedeLogic centipedeLogic)
     {
         this.serverConfig = serverConfig;
         this.server = server;
         this.queenSettings = queenSettings;
         this.queen = queen;
+        this.centipedeLogic = centipedeLogic;
     }
 
 
