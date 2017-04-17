@@ -10,6 +10,15 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Gradle: org.xerial:sqlite-jdbc:3.16.1" level="project" />
+    <orderEntry type="library" name="Gradle: org.flywaydb:flyway-core:4.1.2" level="project" />
+    <orderEntry type="library" name="Gradle: com.zaxxer:HikariCP:2.6.1" level="project" />
+    <orderEntry type="library" name="Gradle: org.jdbi:jdbi3:3.0.0-beta0" level="project" />
+    <orderEntry type="library" name="Gradle: org.jdbi:jdbi3-sqlobject:3.0.0-beta0" level="project" />
+    <orderEntry type="library" name="Gradle: org.antlr:antlr-runtime:3.4" level="project" />
+    <orderEntry type="library" name="Gradle: com.google.code.findbugs:annotations:3.0.1" level="project" />
+    <orderEntry type="library" name="Gradle: com.google.guava:guava:21.0" level="project" />
+    <orderEntry type="library" name="Gradle: net.jodah:expiringmap:0.5.6" level="project" />
+    <orderEntry type="library" name="Gradle: org.assertj:assertj-core:3.5.2" level="project" />
     <orderEntry type="library" name="Gradle: javax.enterprise:cdi-api:2.0-PFD" level="project" />
     <orderEntry type="library" name="Gradle: com.squarespace.jersey2-guice:jersey2-guice-impl:1.0.6" level="project" />
     <orderEntry type="library" name="Gradle: net.sf.jopt-simple:jopt-simple:6.0-alpha-1" level="project" />
@@ -28,13 +37,18 @@
     <orderEntry type="library" name="Gradle: com.fasterxml.jackson.core:jackson-core:2.8.6" level="project" />
     <orderEntry type="library" name="Gradle: com.fasterxml.jackson.core:jackson-annotations:2.8.6" level="project" />
     <orderEntry type="library" name="Gradle: com.fasterxml.jackson.core:jackson-databind:2.8.6" level="project" />
+    <orderEntry type="library" name="Gradle: com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.8.6" level="project" />
+    <orderEntry type="library" name="Gradle: com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.8.6" level="project" />
+    <orderEntry type="library" name="Gradle: org.antlr:stringtemplate:3.2.1" level="project" />
+    <orderEntry type="library" name="Gradle: antlr:antlr:2.7.7" level="project" />
+    <orderEntry type="library" name="Gradle: net.jcip:jcip-annotations:1.0" level="project" />
+    <orderEntry type="library" name="Gradle: com.google.code.findbugs:jsr305:3.0.1" level="project" />
     <orderEntry type="library" name="Gradle: javax.el:javax.el-api:3.0.0" level="project" />
     <orderEntry type="library" name="Gradle: javax.interceptor:javax.interceptor-api:1.2" level="project" />
     <orderEntry type="library" name="Gradle: javax.inject:javax.inject:1" level="project" />
     <orderEntry type="library" name="Gradle: com.google.inject.extensions:guice-multibindings:4.0" level="project" />
     <orderEntry type="library" name="Gradle: com.google.inject.extensions:guice-servlet:4.0" level="project" />
     <orderEntry type="library" name="Gradle: com.squarespace.jersey2-guice:0-jersey2-guice-spi:1.0.6" level="project" />
-    <orderEntry type="library" name="Gradle: com.google.code.findbugs:jsr305:3.0.1" level="project" />
     <orderEntry type="library" name="Gradle: io.undertow:undertow-core:1.4.10.Final" level="project" />
     <orderEntry type="library" name="Gradle: io.undertow:undertow-servlet:1.4.10.Final" level="project" />
     <orderEntry type="library" name="Gradle: org.jboss.spec.javax.websocket:jboss-websocket-api_1.1_spec:1.1.0.Final" level="project" />
@@ -62,7 +76,6 @@
     <orderEntry type="library" name="Gradle: javax.validation:validation-api:1.1.0.Final" level="project" />
     <orderEntry type="library" name="Gradle: com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.8.4" level="project" />
     <orderEntry type="library" name="Gradle: aopalliance:aopalliance:1.0" level="project" />
-    <orderEntry type="library" name="Gradle: com.google.guava:guava:16.0.1" level="project" />
     <orderEntry type="library" name="Gradle: org.glassfish.hk2.external:aopalliance-repackaged:2.5.0-b32" level="project" />
     <orderEntry type="library" name="Gradle: org.glassfish.hk2:hk2-utils:2.5.0-b32" level="project" />
     <orderEntry type="library" name="Gradle: org.javassist:javassist:3.20.0-GA" level="project" />
@@ -74,7 +87,9 @@
           <root url="jar://$MODULE_DIR$/../../modules/base/build/libs/base-1.jar!/" />
         </CLASSES>
         <JAVADOC />
-        <SOURCES />
+        <SOURCES>
+          <root url="jar://$MODULE_DIR$/../../modules/base/build/libs/base-1-sources.jar!/" />
+        </SOURCES>
       </library>
     </orderEntry>
     <orderEntry type="library" scope="PROVIDED" name="Gradle: org.projectlombok:lombok:1.16.16" level="project" />

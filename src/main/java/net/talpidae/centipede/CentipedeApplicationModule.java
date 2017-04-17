@@ -21,16 +21,7 @@ package net.talpidae.centipede;
 import com.google.inject.AbstractModule;
 import lombok.extern.slf4j.Slf4j;
 import net.talpidae.base.Base;
-import net.talpidae.base.insect.AsyncQueen;
-import net.talpidae.base.insect.Queen;
-import net.talpidae.base.insect.Slave;
-import net.talpidae.base.insect.SyncSlave;
-import net.talpidae.base.insect.config.DefaultQueenSettings;
-import net.talpidae.base.insect.config.DefaultSlaveSettings;
-import net.talpidae.base.insect.config.QueenSettings;
-import net.talpidae.base.insect.config.SlaveSettings;
-import net.talpidae.base.server.DefaultServerConfig;
-import net.talpidae.base.server.ServerConfig;
+import net.talpidae.base.insect.SyncQueen;
 import net.talpidae.base.util.Application;
 import net.talpidae.base.util.auth.Authenticator;
 import net.talpidae.base.util.session.SessionService;
@@ -51,6 +42,7 @@ public class CentipedeApplicationModule extends AbstractModule
     protected void configure()
     {
         bind(Application.class).to(CentipedeApplication.class);
+        bind(SyncQueen.class).to(CentipedeSyncQueen.class);
 
         bind(Authenticator.class).to(LocalAuthenticator.class);
         bind(SessionService.class).to(LocalSessionService.class);

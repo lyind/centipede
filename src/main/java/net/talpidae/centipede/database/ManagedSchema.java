@@ -15,8 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package net.talpidae.centipede.db;
+package net.talpidae.centipede.database;
 
-public class Database
+import javax.sql.DataSource;
+
+
+public interface ManagedSchema
 {
+    DataSource migrate();
 }

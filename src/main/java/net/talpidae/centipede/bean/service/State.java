@@ -15,11 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package net.talpidae.centipede.db.dao;
+package net.talpidae.centipede.bean.service;
 
-public interface ServiceDAO
+public enum State
 {
-
-
-    void close();
+    UNKNOWN,
+    DOWN,
+    CHANGING,
+    UP
 }

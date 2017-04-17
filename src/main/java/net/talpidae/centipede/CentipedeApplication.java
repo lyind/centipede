@@ -29,7 +29,6 @@ import net.talpidae.centipede.resource.Resource;
 
 import javax.inject.Inject;
 import javax.servlet.ServletException;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
