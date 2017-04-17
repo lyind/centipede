@@ -20,6 +20,7 @@ package net.talpidae.centipede.database;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.OptionalBinder;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.val;
@@ -36,6 +37,8 @@ public class DataBaseModule extends AbstractModule
     @Override
     protected void configure()
     {
+        OptionalBinder.newOptionalBinder(binder(), DataBaseConfig.class).setDefault().to(DefaultDataBaseConfig.class);
+
         bind(DataSource.class).to(HikariDataSource.class);
         bind(ManagedSchema.class).to(FlywayManagedSchema.class);
 
@@ -55,7 +58,7 @@ public class DataBaseModule extends AbstractModule
     @Singleton
     public Jdbi jdbiProvider(ManagedSchema managedSchema)
     {
-        return Jdbi.create(managedSchema.migrate());
+        return Jdbi.create(managedSchema.migrate()).installPlugins();
     }
 
 

@@ -25,6 +25,7 @@ import net.talpidae.base.insect.SyncQueen;
 import net.talpidae.base.util.Application;
 import net.talpidae.base.util.auth.Authenticator;
 import net.talpidae.base.util.session.SessionService;
+import net.talpidae.centipede.database.DataBaseModule;
 import net.talpidae.centipede.util.auth.LocalAuthenticator;
 import net.talpidae.centipede.util.session.LocalSessionService;
 
@@ -41,6 +42,8 @@ public class CentipedeApplicationModule extends AbstractModule
     @Override
     protected void configure()
     {
+        install(new DataBaseModule());
+
         bind(Application.class).to(CentipedeApplication.class);
         bind(SyncQueen.class).to(CentipedeSyncQueen.class);
 

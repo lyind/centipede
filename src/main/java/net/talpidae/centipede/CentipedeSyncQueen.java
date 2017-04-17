@@ -21,6 +21,7 @@ public class CentipedeSyncQueen extends SyncQueen
         super(settings);
 
         this.eventBus = eventBus;
+        this.eventBus.register(this);
         this.centipedeLogic = centipedeLogic;
     }
 
