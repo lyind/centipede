@@ -35,19 +35,16 @@ public class Service
     /**
      * This service instances generation (increased whenever something changed).
      */
-    @Builder.Default
     private final int generation;
 
     /**
      * Is this service instance deleted (ie. set end-of-life)?
      */
-    @Builder.Default
     private final boolean retired;
 
     /**
      * Creation timestamp of this record (ie. last modified timestamp).
      */
-    @Builder.Default
     private final OffsetDateTime ts;
 
     /**
@@ -56,18 +53,15 @@ public class Service
     @NonNull
     private final String name;
 
-    @Builder.Default
     @NonNull
     private final State state;
 
-    @Builder.Default
     @NonNull
     private final State targetState;
 
     /**
      * Service implementation type.
      */
-    @Builder.Default
     private final Kind kind;
 
     /**

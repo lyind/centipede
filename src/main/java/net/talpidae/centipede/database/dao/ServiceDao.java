@@ -29,24 +29,24 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 public interface ServiceDao
 {
     @SqlQuery("SELECT *\n"
-            + "FROM service s1\n"
+            + "FROM service\n"
             + "WHERE NOT retired\n"
-            + "  AND s1.generation = (\n"
+            + "  AND generation = (\n"
             + "    SELECT MAX(s2.generation)\n"
             + "    FROM service s2\n"
-            + "    WHERE s2.name = s1.name\n"
+            + "    WHERE s2.name = name\n"
             + "  )\n"
             + "ORDER BY name ASC")
     Iterable<Service> findAll();
 
     @SqlQuery("SELECT *\n"
-            + "FROM service s1\n"
+            + "FROM service\n"
             + "WHERE NOT retired\n"
-            + "  AND s1.name = :name\n"
-            + "  AND s1.generation = (\n"
+            + "  AND name = :name\n"
+            + "  AND generation = (\n"
             + "    SELECT MAX(s2.generation)\n"
             + "    FROM service s2\n"
-            + "    WHERE s2.name = s1.name\n"
+            + "    WHERE s2.name = name\n"
             + "  )\n")
     Service findByName(@Bind("name") String name);
 
