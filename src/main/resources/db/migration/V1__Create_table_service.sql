@@ -2,7 +2,7 @@ CREATE TABLE service (
 	generation INTEGER NOT NULL,
 	name TEXT NOT NULL,
 	retired INTEGER NOT NULL DEFAULT 0,
-	ts DATETIME NOT NULL DEFAULT(strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+	ts DATETIME NOT NULL DEFAULT(strftime('%Y-%m-%d %H:%M:%f', 'now')),
 	state TEXT NOT NULL,
 	targetState TEXT NOT NULL,
 	kind TEXT,
