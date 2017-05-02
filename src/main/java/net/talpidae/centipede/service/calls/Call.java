@@ -15,16 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package net.talpidae.centipede.event;
+package net.talpidae.centipede.service.calls;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import net.talpidae.base.insect.message.payload.Mapping;
+import net.talpidae.centipede.bean.service.Api;
+
+import java.util.function.Function;
 
 
-@RequiredArgsConstructor
-@Getter
-public class NewMapping
+/**
+ * Every service needs to implement this.
+ */
+public interface Call extends Function<Api, Api>
 {
-    private final Mapping mapping;
+    Phase getPhase();
 }

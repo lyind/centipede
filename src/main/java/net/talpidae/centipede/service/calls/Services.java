@@ -15,16 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package net.talpidae.centipede.event;
+package net.talpidae.centipede.service.calls;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import net.talpidae.base.insect.message.payload.Mapping;
+import net.talpidae.centipede.bean.service.Api;
 
 
-@RequiredArgsConstructor
 @Getter
-public class NewMapping
+public class Services implements Call
 {
-    private final Mapping mapping;
+    private final Phase phase = Phase.HANDLE;
+
+    @Override
+    public Api apply(Api request)
+    {
+        if (request != null)
+        {
+
+        }
+
+        return request;
+    }
 }

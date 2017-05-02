@@ -17,28 +17,91 @@
 
 package net.talpidae.centipede.util.session;
 
+import com.google.common.eventbus.Subscribe;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import net.talpidae.base.event.Shutdown;
 import net.talpidae.base.util.session.SessionHolder;
+import net.talpidae.base.util.thread.NamedThreadFactory;
+import net.talpidae.centipede.service.ApiBroadcastQueue;
+import net.talpidae.centipede.service.calls.CallQueue;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.websocket.Session;
+import java.util.concurrent.*;
 
 
+@Singleton
+@Slf4j
 public class WebSocketSessionHolder implements SessionHolder
 {
+    private final static long BROADCAST_QUEUE_WAIT_TIMEOUT_MSEC = 1000;
+
+    private final ConcurrentMap<String, Session> idToSession = new ConcurrentHashMap<>();
+
+    private final ApiBroadcastQueue broadcastQueue;
+
+    private final ExecutorService broadcastExecutorService;
+
+    private final CallQueue apiCallQueue;
+
+
+    @Inject
+    public WebSocketSessionHolder(ApiBroadcastQueue broadcastQueue, CallQueue apiCallQueue)
+    {
+        this.broadcastQueue = broadcastQueue;
+        this.apiCallQueue = apiCallQueue;
+        this.broadcastExecutorService = Executors.newSingleThreadExecutor(new NamedThreadFactory("WebSocket-Broadcast"));
+
+        this.broadcastExecutorService.submit(new BroadcastWorker());
+    }
+
+
+    @Subscribe
+    public void onShutdown(Shutdown shutdown)
+    {
+        broadcastExecutorService.shutdown();
+    }
+
+
     @Override
     public void put(Session session)
     {
-
+        idToSession.put(session.getId(), session);
     }
 
     @Override
     public void remove(String id)
     {
-
+        idToSession.remove(id);
     }
 
-    @Override
-    public void send(String data)
-    {
 
+    private class BroadcastWorker implements Runnable
+    {
+        @Override
+        public void run()
+        {
+            try
+            {
+                while (!Thread.interrupted())
+                {
+                    broadcastQueue.waitForElement(BROADCAST_QUEUE_WAIT_TIMEOUT_MSEC, TimeUnit.MILLISECONDS);
+                    for (val session : idToSession.values())
+                    {
+                        if (session.isOpen())
+                        {
+                            apiCallQueue.enqueueBroadcasts(session);
+                        }
+                    }
+                }
+            }
+            catch (InterruptedException e)
+            {
+                log.debug("interrupted");
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 }

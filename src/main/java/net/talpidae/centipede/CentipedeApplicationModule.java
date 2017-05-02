@@ -21,17 +21,24 @@ package net.talpidae.centipede;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.OptionalBinder;
 import lombok.extern.slf4j.Slf4j;
 import net.talpidae.base.Base;
 import net.talpidae.base.database.DefaultDataBaseConfig;
 import net.talpidae.base.insect.SyncQueen;
+import net.talpidae.base.server.WebSocketEndpoint;
 import net.talpidae.base.util.Application;
 import net.talpidae.base.util.auth.Authenticator;
+import net.talpidae.base.util.session.SessionHolder;
 import net.talpidae.base.util.session.SessionService;
 import net.talpidae.centipede.database.CentipedeDefaultDataBaseConfig;
 import net.talpidae.centipede.database.CentipedeRepository;
+import net.talpidae.centipede.resource.CentipedeWebSocketEndPoint;
+import net.talpidae.centipede.service.ServiceModule;
 import net.talpidae.centipede.util.auth.LocalAuthenticator;
 import net.talpidae.centipede.util.session.LocalSessionService;
+import net.talpidae.centipede.util.session.WebSocketSessionHolder;
 import org.jdbi.v3.core.Jdbi;
 
 
@@ -54,7 +61,13 @@ public class CentipedeApplicationModule extends AbstractModule
         bind(Authenticator.class).to(LocalAuthenticator.class);
         bind(SessionService.class).to(LocalSessionService.class);
 
+        bind(SessionHolder.class).to(WebSocketSessionHolder.class);
+
         bind(CentipedeLogic.class);
+
+        OptionalBinder.newOptionalBinder(binder(), new TypeLiteral<Class<? extends WebSocketEndpoint>>() {}).setBinding().toInstance(CentipedeWebSocketEndPoint.class);
+
+        install(new ServiceModule());
     }
 
 

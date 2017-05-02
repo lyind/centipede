@@ -19,54 +19,64 @@ package net.talpidae.centipede.resource;
 
 import com.google.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
-import net.talpidae.base.server.WebSocketHandler;
+import net.talpidae.base.server.WebSocketEndpoint;
 import net.talpidae.base.util.session.SessionHolder;
+import net.talpidae.centipede.service.calls.CallQueue;
 
 import javax.inject.Inject;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
+import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
 
 
 @Slf4j
 @Singleton
-public class CentipedeWebSocketHandler implements WebSocketHandler
+@ServerEndpoint("/")
+public class CentipedeWebSocketEndPoint extends WebSocketEndpoint
 {
     private final SessionHolder sessionHolder;
 
+    private final CallQueue apiCallQueue;
+
+
     @Inject
-    public CentipedeWebSocketHandler(SessionHolder sessionHolder)
+    public CentipedeWebSocketEndPoint(SessionHolder sessionHolder, CallQueue apiCallQueue)
     {
         this.sessionHolder = sessionHolder;
+        this.apiCallQueue = apiCallQueue;
     }
 
     @Override
     public void connect(Session session) throws IOException
     {
-        log.info("connect()", session);
+        log.debug("connect(): {}", session.getId());
+        sessionHolder.put(session);
     }
 
     @Override
     public void message(String message, Session session)
     {
-        log.info("message(): {}", message);
+        log.debug("message(): {}: {}", session.getId(), message);
+        apiCallQueue.enqueue(session, message);
     }
 
     @Override
     public void message(byte[] bytes, boolean done, Session session)
     {
-        log.info("message(): {}, done={}", bytes, done);
+        log.debug("unhandled binary message(): {}: {}, done={}", session.getId(), bytes, done);
     }
 
     @Override
     public void error(Throwable throwable, Session session)
     {
-        log.info("error(): {}", throwable);
+        log.debug("error() for session: {}", session.getId(), throwable);
     }
 
     @Override
     public void close(CloseReason closeReason, Session session)
     {
-        log.info("close(): {}", closeReason);
+        log.debug("close() for session: {}: reason={}", session.getId(), closeReason);
+        sessionHolder.remove(session.getId());
     }
 }

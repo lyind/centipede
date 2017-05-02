@@ -23,6 +23,7 @@ import net.talpidae.base.database.DefaultDataBaseConfig;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 
 @Singleton
@@ -43,9 +44,9 @@ public class CentipedeDefaultDataBaseConfig extends DefaultDataBaseConfig
 
     private final String connectionTestQuery = "SELECT 1";
 
-    private final int maxLifetime = 72000; // 72s
+    private final int maxLifetime = (int) TimeUnit.MINUTES.toMillis(8);
 
-    private final int idleTimeout = 45000; // 45s
+    private final int idleTimeout = (int) TimeUnit.SECONDS.toMillis(45);
 
     private final Map<String, String> dataSourceProperties = new HashMap<>();
 

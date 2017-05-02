@@ -15,16 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package net.talpidae.centipede.event;
+package net.talpidae.centipede.service.calls;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import net.talpidae.base.insect.message.payload.Mapping;
-
-
-@RequiredArgsConstructor
-@Getter
-public class NewMapping
+public enum Phase
 {
-    private final Mapping mapping;
+    PRE_HANDLE,
+    HANDLE,
+    POST_HANDLE
 }

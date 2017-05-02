@@ -15,16 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package net.talpidae.centipede.event;
+package net.talpidae.centipede.service.calls;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import net.talpidae.base.insect.message.payload.Mapping;
-
-
-@RequiredArgsConstructor
-@Getter
-public class NewMapping
+public class CallException extends RuntimeException
 {
-    private final Mapping mapping;
+    CallException(String message)
+    {
+        super(message);
+    }
 }
