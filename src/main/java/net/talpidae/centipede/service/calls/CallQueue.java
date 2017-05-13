@@ -36,7 +36,7 @@ import java.util.concurrent.ScheduledExecutorService;
 @Slf4j
 public class CallQueue
 {
-    private static final int DEFAULT_CORE_POOL_SIZE = Math.max(1, (int) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.75));
+    private static final int DEFAULT_CORE_POOL_SIZE = Math.max(2, (int) Math.ceil(Runtime.getRuntime().availableProcessors() / 4));
 
     private final ScheduledExecutorService executorService;
 

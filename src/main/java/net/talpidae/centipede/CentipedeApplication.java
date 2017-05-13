@@ -25,7 +25,7 @@ import net.talpidae.base.insect.config.QueenSettings;
 import net.talpidae.base.server.Server;
 import net.talpidae.base.server.ServerConfig;
 import net.talpidae.base.util.Application;
-import net.talpidae.centipede.resource.Resource;
+import net.talpidae.centipede.util.server.CentipedeRootHandlerWrapper;
 
 import javax.inject.Inject;
 import javax.servlet.ServletException;
@@ -39,8 +39,6 @@ import static java.lang.System.exit;
 @Slf4j
 public class CentipedeApplication implements Application
 {
-    private static final String[] resourcePackages = new String[]{Resource.class.getPackage().getName()};
-
     private final ServerConfig serverConfig;
 
     private final Server server;
@@ -51,22 +49,35 @@ public class CentipedeApplication implements Application
 
     private final CentipedeLogic centipedeLogic;
 
+    private final CentipedeRootHandlerWrapper rootHandlerWrapper;
+
 
     @Inject
-    public CentipedeApplication(ServerConfig serverConfig, Server server, QueenSettings queenSettings, Queen queen, CentipedeLogic centipedeLogic)
+    public CentipedeApplication(ServerConfig serverConfig,
+                                Server server,
+                                QueenSettings queenSettings,
+                                Queen queen,
+                                CentipedeLogic centipedeLogic,
+                                CentipedeRootHandlerWrapper rootHandlerWrapper)
     {
         this.serverConfig = serverConfig;
         this.server = server;
         this.queenSettings = queenSettings;
         this.queen = queen;
         this.centipedeLogic = centipedeLogic;
+        this.rootHandlerWrapper = rootHandlerWrapper;
     }
 
 
     @Override
     public void run()
     {
-        serverConfig.setJerseyResourcePackages(resourcePackages);
+        // add http handler that serves static files and falls back to serving "/" on unknown objects
+        // (enables browser history support)
+        serverConfig.setRootHandlerWrapper(rootHandlerWrapper);
+
+        // disable Jersey, for now
+        serverConfig.setJerseyResourcePackages(new String[0]);
         try
         {
             server.start();

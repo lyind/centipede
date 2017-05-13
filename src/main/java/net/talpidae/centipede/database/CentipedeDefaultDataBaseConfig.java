@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 @Getter
 public class CentipedeDefaultDataBaseConfig extends DefaultDataBaseConfig
 {
-    private final int maximumPoolSize = Math.max(8, Runtime.getRuntime().availableProcessors());
+    private final int maximumPoolSize = Math.max(4, Runtime.getRuntime().availableProcessors() / 4);
 
     private final String jdbcUrl = "jdbc:sqlite:centipede.db";
 
