@@ -21,7 +21,7 @@ import com.google.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import net.talpidae.base.server.WebSocketEndpoint;
 import net.talpidae.base.util.session.SessionHolder;
-import net.talpidae.centipede.service.calls.CallQueue;
+import net.talpidae.centipede.service.calls.CallHandlerQueue;
 
 import javax.inject.Inject;
 import javax.websocket.CloseReason;
@@ -37,11 +37,11 @@ public class CentipedeWebSocketEndPoint extends WebSocketEndpoint
 {
     private final SessionHolder sessionHolder;
 
-    private final CallQueue apiCallQueue;
+    private final CallHandlerQueue apiCallQueue;
 
 
     @Inject
-    public CentipedeWebSocketEndPoint(SessionHolder sessionHolder, CallQueue apiCallQueue)
+    public CentipedeWebSocketEndPoint(SessionHolder sessionHolder, CallHandlerQueue apiCallQueue)
     {
         this.sessionHolder = sessionHolder;
         this.apiCallQueue = apiCallQueue;

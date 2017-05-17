@@ -20,19 +20,19 @@ package net.talpidae.centipede.service;
 import com.google.inject.AbstractModule;
 import com.google.inject.binder.LinkedBindingBuilder;
 import com.google.inject.multibindings.Multibinder;
-import net.talpidae.centipede.service.calls.Call;
+import net.talpidae.centipede.service.calls.CallHandler;
 import net.talpidae.centipede.service.calls.Security;
 import net.talpidae.centipede.service.calls.Services;
 
 
 public class ServiceModule extends AbstractModule
 {
-    private Multibinder<Call> callBinder;
+    private Multibinder<CallHandler> callBinder;
 
     @Override
     protected void configure()
     {
-        callBinder = Multibinder.newSetBinder(binder(), Call.class);
+        callBinder = Multibinder.newSetBinder(binder(), CallHandler.class);
 
         bindCall().to(Security.class);
         bindCall().to(Services.class);
@@ -50,7 +50,7 @@ public class ServiceModule extends AbstractModule
     }
 
 
-    protected final LinkedBindingBuilder<Call> bindCall()
+    protected final LinkedBindingBuilder<CallHandler> bindCall()
     {
         return callBinder.addBinding();
     }

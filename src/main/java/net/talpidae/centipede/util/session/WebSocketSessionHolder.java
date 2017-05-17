@@ -24,7 +24,7 @@ import net.talpidae.base.event.Shutdown;
 import net.talpidae.base.util.session.SessionHolder;
 import net.talpidae.base.util.thread.NamedThreadFactory;
 import net.talpidae.centipede.service.ApiBroadcastQueue;
-import net.talpidae.centipede.service.calls.CallQueue;
+import net.talpidae.centipede.service.calls.CallHandlerQueue;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -44,11 +44,11 @@ public class WebSocketSessionHolder implements SessionHolder
 
     private final ExecutorService broadcastExecutorService;
 
-    private final CallQueue apiCallQueue;
+    private final CallHandlerQueue apiCallQueue;
 
 
     @Inject
-    public WebSocketSessionHolder(ApiBroadcastQueue broadcastQueue, CallQueue apiCallQueue)
+    public WebSocketSessionHolder(ApiBroadcastQueue broadcastQueue, CallHandlerQueue apiCallQueue)
     {
         this.broadcastQueue = broadcastQueue;
         this.apiCallQueue = apiCallQueue;

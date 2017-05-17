@@ -15,37 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// WebSocket subject (ws) sub-protocol client
-(function(broker, rx)
-{
-    var ws = {};
-    
-    // reference to the current connection
-    ws.socket = undefined;
-    
-    // open WebSocket connection
-    ws.open = function(url)
-    {
-        ws.socket = new WebSocket(url);
-        //
-        
-    };
-    
-    
-    // issue an asynchronous call, returns an observable registered with the broker
-    ws.call = function(data)
-    {
-        if (this.socket)
-        {
-            
-        }
-    };
-    const socketMessage$ = socket$.flatMap(
+package net.talpidae.centipede.event;
 
-    var socket => .share()
-    
-    
-    // publish
-    window.ws = ws;
-    
-}).(broker, rx);
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+
+@RequiredArgsConstructor
+@Getter
+public class ServiceModified
+{
+    private final String serviceName;
+}

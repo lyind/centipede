@@ -25,7 +25,7 @@ import java.util.function.Function;
 /**
  * Every service needs to implement this.
  */
-public interface Call extends Function<Api, Api>
+public interface CallHandler extends Function<Api, Api>
 {
     Phase getPhase();
 }

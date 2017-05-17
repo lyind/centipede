@@ -7,7 +7,7 @@ import net.talpidae.base.util.auth.AuthenticationSecurityContext;
 
 @Getter
 @Setter
-public class RequestContext
+public class CallContext
 {
     private AuthenticationSecurityContext securityContext;
 }

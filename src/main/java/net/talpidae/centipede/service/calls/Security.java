@@ -33,7 +33,7 @@ import java.util.Optional;
 
 
 @Getter
-public class Security implements Call
+public class Security implements CallHandler
 {
     private final Phase phase = Phase.PRE_HANDLE;
 
@@ -85,7 +85,7 @@ public class Security implements Call
 
     private Api signin(Api request)
     {
-        if (Strings.isNullOrEmpty(request.getToken()))
+        if (request.getToken() == null)
         {
             return request;
         }

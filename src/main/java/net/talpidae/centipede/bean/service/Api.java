@@ -21,7 +21,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import net.talpidae.base.util.auth.Credentials;
-import net.talpidae.centipede.service.wrapper.RequestContext;
+import net.talpidae.centipede.service.wrapper.CallContext;
 
 import java.util.List;
 
@@ -40,7 +40,7 @@ public class Api
      * Request context. Only interesting while an event is processed.
      */
     //@Builder.Default
-    private final transient RequestContext context = new RequestContext();
+    private final transient CallContext context = new CallContext();
 
     /**
      * Authentication token.
@@ -55,7 +55,7 @@ public class Api
     /**
      * Main topic, manage services.
      */
-    private List<Service> services;
+    private Iterable<Service> services;
 
     /**
      * Error message from the server to the client.

@@ -24,10 +24,12 @@ import org.jdbi.v3.sqlobject.customizer.BindBean;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
+import java.util.List;
 
-@RegisterConstructorMapper(Service.class)
+
 public interface ServiceDao
 {
+    @RegisterConstructorMapper(Service.class)
     @SqlQuery("SELECT *\n"
             + "FROM service\n"
             + "WHERE NOT retired\n"
@@ -37,8 +39,9 @@ public interface ServiceDao
             + "    WHERE s2.name = name\n"
             + "  )\n"
             + "ORDER BY name ASC")
-    Iterable<Service> findAll();
+    List<Service> findAll();
 
+    @RegisterConstructorMapper(Service.class)
     @SqlQuery("SELECT *\n"
             + "FROM service\n"
             + "WHERE NOT retired\n"
@@ -66,21 +69,71 @@ public interface ServiceDao
             + "  host,\n"
             + "  port\n"
             + ")\n"
-            + "  VALUES (\n"
-            + "    :generation + 1,\n"
+            + "  SELECT\n"
+            + "    ifnull(generation, 0) + 1 AS generation,\n"
             + "    :name,\n"
             + "    :retired,\n"
-            + "    :state,\n"
+            + "    ifnull(state, 'UNKNOWN') AS state,\n"
             + "    :targetState,\n"
             + "    :kind,\n"
             + "    :vmArguments,\n"
             + "    :image,\n"
             + "    :arguments,\n"
-            + "    :route,\n"
+            + "    route,\n"
             + "    :proxyPathPrefix,\n"
+            + "    pid,\n"
+            + "    host,\n"
+            + "    port\n"
+            + "  FROM\n"
+            + "  service s1\n"
+            + "  WHERE NOT retired\n"
+            + "    AND name = :name\n"
+            + "    AND generation = (\n"
+            + "      SELECT MAX(s2.generation)\n"
+            + "      FROM service s2\n"
+            + "      WHERE s2.name = :name\n"
+            + "  )\n")
+    void insertExposedFields(@BindBean Service service);
+
+    @SqlUpdate("INSERT INTO service (\n"
+            + "  generation,\n"
+            + "  name,\n"
+            + "  retired,\n"
+            + "  state,\n"
+            + "  targetState,\n"
+            + "  kind,\n"
+            + "  vmArguments,\n"
+            + "  image,\n"
+            + "  arguments,\n"
+            + "  route,\n"
+            + "  proxyPathPrefix,\n"
+            + "  pid,\n"
+            + "  host,\n"
+            + "  port\n"
+            + ")\n"
+            + "  SELECT\n"
+            + "    ifnull(generation, 0) + 1 AS generation,\n"
+            + "    :name,\n"
+            + "    :retired,\n"
+            + "    :state,\n"
+            + "    ifnull(targetState, 'UNKNOWN') AS targetState,\n"
+            + "    kind,\n"
+            + "    vmArguments,\n"
+            + "    image,\n"
+            + "    arguments,\n"
+            + "    :route,\n"
+            + "    proxyPathPrefix,\n"
             + "    :pid,\n"
             + "    :host,\n"
             + "    :port\n"
+            + "  FROM\n"
+            + "  service s1\n"
+            + "  WHERE NOT retired\n"
+            + "    AND name = :name\n"
+            + "    AND generation = (\n"
+            + "      SELECT MAX(s2.generation)\n"
+            + "      FROM service s2\n"
+            + "      WHERE s2.name = :name\n"
             + "  )\n")
-    void insert(@BindBean Service service);
+    void insertOrUpdateServiceState(@BindBean Service service);
 }

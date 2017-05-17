@@ -34,7 +34,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 @Singleton
 @Slf4j
-public class CallQueue
+public class CallHandlerQueue
 {
     private static final int DEFAULT_CORE_POOL_SIZE = Math.max(2, (int) Math.ceil(Runtime.getRuntime().availableProcessors() / 4));
 
@@ -44,9 +44,9 @@ public class CallQueue
 
 
     @Inject
-    public CallQueue(ApiRunnableFactory apiRunnableFactory)
+    public CallHandlerQueue(ApiRunnableFactory apiRunnableFactory)
     {
-        this.executorService = Executors.newScheduledThreadPool(DEFAULT_CORE_POOL_SIZE, new NamedThreadFactory(CallQueue.class.getSimpleName()));
+        this.executorService = Executors.newScheduledThreadPool(DEFAULT_CORE_POOL_SIZE, new NamedThreadFactory(CallHandlerQueue.class.getSimpleName()));
         this.apiRunnableFactory = apiRunnableFactory;
     }
 

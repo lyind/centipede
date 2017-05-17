@@ -30,7 +30,7 @@ import net.talpidae.base.util.auth.AuthenticationSecurityContext;
 import net.talpidae.base.util.queue.Enqueueable;
 import net.talpidae.base.util.session.SessionHolder;
 import net.talpidae.centipede.bean.service.Api;
-import net.talpidae.centipede.service.calls.Call;
+import net.talpidae.centipede.service.calls.CallHandler;
 import net.talpidae.centipede.service.calls.CallException;
 
 import javax.inject.Inject;
@@ -50,7 +50,7 @@ public class ApiRunnableFactory
 
     private final static String SESSION_SECURITY_CONTEXT_KEY = ApiRunnableFactory.log.getName() + "-security-context";
 
-    private final List<Call> apiFunctionsByPhase;
+    private final List<CallHandler> apiFunctionsByPhase;
 
     private final ObjectReader apiReader;
 
@@ -62,12 +62,12 @@ public class ApiRunnableFactory
 
 
     @Inject
-    public ApiRunnableFactory(ObjectMapper objectMapper, SessionHolder sessionHolder, Set<Call> apiFunctions, ApiBroadcastQueue apiBroadcastQueue)
+    public ApiRunnableFactory(ObjectMapper objectMapper, SessionHolder sessionHolder, Set<CallHandler> apiFunctions, ApiBroadcastQueue apiBroadcastQueue)
     {
         this.apiFunctionsByPhase = new ArrayList<>(apiFunctions);
 
         // important, sort the calls by phase to allow for some order (authentication first and things like that...)
-        Collections.sort(this.apiFunctionsByPhase, Comparator.comparing(Call::getPhase));
+        Collections.sort(this.apiFunctionsByPhase, Comparator.comparing(CallHandler::getPhase));
 
         this.apiReader = objectMapper.readerFor(Api.class);
         this.apiWriter = objectMapper.writerFor(Api.class);

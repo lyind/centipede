@@ -54,20 +54,15 @@ public class CentipedeLogic
     public void onNewMapping(NewMapping newMapping)
     {
         val mapping = newMapping.getMapping();
+        val updatedService = Service.builder()
+                .name(mapping.getName())
+                .state(State.UP)
+                .targetState(State.UNKNOWN)
+                .route(mapping.getRoute())
+                .host(mapping.getHost())
+                .port(mapping.getPort())
+                .build();
 
-        val service = repository.findServiceByName(mapping.getName());
-        if (!service.isPresent())
-        {
-            val newService = Service.builder()
-                    .name(mapping.getName())
-                    .state(State.UP)
-                    .targetState(State.UNKNOWN)
-                    .route(mapping.getRoute())
-                    .host(mapping.getHost())
-                    .port(mapping.getPort())
-                    .build();
-
-            repository.createService(newService);
-        }
+        repository.insertOrUpdateServiceState(updatedService);
     }
 }

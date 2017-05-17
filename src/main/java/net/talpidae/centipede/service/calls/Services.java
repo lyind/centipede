@@ -17,21 +17,57 @@
 
 package net.talpidae.centipede.service.calls;
 
+import com.google.common.eventbus.EventBus;
 import lombok.Getter;
+import lombok.val;
 import net.talpidae.centipede.bean.service.Api;
+import net.talpidae.centipede.database.CentipedeRepository;
+import net.talpidae.centipede.event.ServiceModified;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 
 @Getter
-public class Services implements Call
+@Singleton
+public class Services implements CallHandler
 {
     private final Phase phase = Phase.HANDLE;
+
+    private final CentipedeRepository centipedeRepository;
+
+    private final EventBus eventBus;
+
+
+    @Inject
+    public Services(CentipedeRepository centipedeRepository, EventBus eventBus)
+    {
+        this.centipedeRepository = centipedeRepository;
+        this.eventBus = eventBus;
+    }
+
 
     @Override
     public Api apply(Api request)
     {
-        if (request != null)
+        if (request != null && request.getServices() != null)
         {
+            val serviceIterator = request.getServices().iterator();
 
+            // accept changes if there are any
+            while (serviceIterator.hasNext())
+            {
+                val service = serviceIterator.next();
+
+                // TODO Add some validation here.
+
+                centipedeRepository.insertOrUpdateServiceExposedFields(service);
+
+                eventBus.post(new ServiceModified(service.getName()));
+            }
+
+            // fulfill list request
+            request.setServices(centipedeRepository.findAll());
         }
 
         return request;
