@@ -19,18 +19,17 @@
 // UI helper
 (function(app, Rx)
 {
-    var cell = {};
-    
-    
-    // find the parent of the last loaded <script> tag
-    cell.findCellElement = function()
+    var splitter = function(message)
     {
-        var scriptTag = document.scripts[document.scripts.length - 1];
-        return scriptTag.parentNode;
+        if (message.services && message.services)
     };
-    
-    
+
     // publish
-    app.cell = cell;
-    
+    if (!app.splitters)
+    {
+        app.splitters = [];
+    }
+
+    app.splitters.push(splitter);
+
 }).(window.app, Rx);

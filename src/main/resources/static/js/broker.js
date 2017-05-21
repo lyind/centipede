@@ -14,13 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+ "use strict";
 
 // subject based observable broker
-(function(Rx)
+(function(app, Rx)
 {
     var store = {};
 
-    
+
     // get an observable for a specific subject
     // optionally set a new supplier function (must return an observable)
     broker = function(subject, supplier)
@@ -30,13 +31,13 @@
         var channel = store[subject];
         if (!channel)
         {
-            channel = channel(function()
+            channel = createChannel(function()
             {
                 // un-register from store after last subscriber disconnected
                 delete store[subject];
             });
 
-            store[subject] = ;
+            store[subject] = channel;
         }
 
         if (supplier)
@@ -44,20 +45,20 @@
             channel.supplier = supplier;
         }
 
-        return channel();
+        return channel;
     };
 
 
     // create a channel (an observer that never completes and has a ReplaySubject attached to it)
-    channel = function(onDereference)
+    createChannel = function(onDereference)
     {
-        return function()
+        return function(onDereference)
         {
             var onDereference = onDereference;
             var observer = this;
             var supplier = undefined;
             var subscription = undefined;
-            var cache = new ReplaySubject(1);
+            var cache = new Rx.ReplaySubject(1);
 
             // output observable with added method request()
             var observable = cache.asObservable().finally(onDereference).publishReplay(1).refCount();
@@ -108,7 +109,7 @@
                     onDereference();
                 }
             };
-        };
+        }(onDereference);
     };
 
 
@@ -125,6 +126,6 @@
 
     
     // publish
-    window.broker = broker;
+    app.broker = broker;
     
-}).(Rx);
+}).(window.app, Rx);

@@ -14,38 +14,71 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+"use strict";
 
 // WebSocket subject (ws) sub-protocol client
-(function(broker, rx)
+(function(app, Rx, broker, splitters)
 {
     var ws = {};
     
     // reference to the current connection
     ws.socket = undefined;
-    
+
+    ws.openId = "ws-open";
+    ws.closeId = "ws-close";
+    ws.errorId = "ws-error";
+
+    ws.id = 0;
+
     // open WebSocket connection
     ws.open = function(url)
     {
         ws.socket = new WebSocket(url);
-        //
-        
+
+        ++ws.id;
+
+        ws.socket.onopen = function(event)
+        {
+            console.log("websocket[" + ws.id + "]: opened");
+            broker(ws.openId, function() { return Rx.Observable.of(ws.id); });
+        };
+
+        ws.socket.onclose = function(event)
+        {
+            if (event.wasClean)
+            {
+                console.log("websocket[" + ws.id + "]: closed");
+                broker(ws.closeId, function() { return Rx.Observable.of(ws.id); });
+            }
+        };
+
+        ws.socket.onmessage = function(event)
+        {
+            // use the provided splitter to split the message and feed information to the correct channel
+            splitters.forEach(function(splitter) { splitter(broker, event.data); });
+        };
+
+        ws.socket.onerror = function(event)
+        {
+            console.log("websocket[" + ws.id + "]: error, trying to re-connect");
+
+            broker(ws.errorId, function() { return Rx.Observable.of(ws.id); });
+
+            setTimeout(500, function() { ws.open(url); });
+        };
     };
     
     
     // issue an asynchronous call, returns an observable registered with the broker
-    ws.call = function(data)
+    ws.send = function(data)
     {
-        if (this.socket)
+        if (ws.socket && ws.socket.readyState === 1)
         {
-            
+            ws.socket.send(data);
         }
     };
-    const socketMessage$ = socket$.flatMap(
-
-    var socket => .share()
-    
     
     // publish
-    window.ws = ws;
+    app.ws = ws;
     
-}).(broker, rx);
+}).(window.app, Rx, window.app.broker, window.app.splitters);
