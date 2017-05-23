@@ -19,18 +19,16 @@
 // UI helper
 (function(app, Rx)
 {
-    var cell = {};
-    
-    
+    var ui = {};
+
     // find the parent of the last loaded <script> tag
-    cell.findCellElement = function()
+    ui.findComponent = function()
     {
         var scriptTag = document.scripts[document.scripts.length - 1];
         return scriptTag.parentNode;
     };
-    
-    
+
     // publish
-    app.cell = cell;
+    Object.defineProperty(app, "ui", { value: ui });
     
-}).(window.app, Rx);
+})(window.app, Rx);

@@ -81,4 +81,4 @@
     // publish
     app.ws = ws;
     
-}).(window.app, Rx, window.app.broker, window.app.splitters);
+})(window.app, Rx, window.app.broker, window.app.splitters);

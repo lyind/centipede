@@ -24,7 +24,7 @@
 
     // get an observable for a specific subject
     // optionally set a new supplier function (must return an observable)
-    broker = function(subject, supplier)
+    var broker = function(subject, supplier)
     {
         subject = normalizeSubject(subject);
 
@@ -49,8 +49,20 @@
     };
 
 
+    // normalizes subject (array to string)
+    var normalizeSubject = function(subject)
+    {
+        if (Array.isArray(subject))
+        {
+            return subject.join("/");
+        }
+
+        return subject;
+    };
+
+
     // create a channel (an observer that never completes and has a ReplaySubject attached to it)
-    createChannel = function(onDereference)
+    var createChannel = function(onDereference)
     {
         return function(onDereference)
         {
@@ -61,7 +73,7 @@
             var cache = new Rx.ReplaySubject(1);
 
             // output observable with added method request()
-            var observable = cache.asObservable().finally(onDereference).publishReplay(1).refCount();
+            var observable = cache.asObservable().finally(destructor).publishReplay(1).refCount();
             observable.pull = function()
             {
                 // un-subscribe from previous source
@@ -74,6 +86,7 @@
                 subscription = newValue.subscribe(observer);
                 if (newValue.pull)
                 {
+                    // allow broker subjects to connect to broker subjects
                     newValue.pull();
                 }
             };
@@ -112,20 +125,8 @@
         }(onDereference);
     };
 
-
-    // normalizes subject (array to string)
-    normalizeSubject = function(subject)
-    {
-        if (Array.isArray(subject))
-        {
-            return subject.join("/");
-        }
-
-        return subject;
-    };
-
     
     // publish
-    app.broker = broker;
-    
-}).(window.app, Rx);
+    Object.defineProperty(app, "broker", { value: broker });
+
+})(window.app, Rx);
