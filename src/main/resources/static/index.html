@@ -8,14 +8,13 @@
 <body>
 <h1>Hello</h1>
 <div>
+    <script>
+    app.schedule(function()
+    {
+        var root = window.app.ui.findComponent();
 
-    <script defer>
-            setTimeout(function() {
-            var root = window.app.cell.findComponent();
-
-            root.textContent = "Ready.";
-            }, 4000);
-
+        root.textContent = "Ready.";
+    });
     </script>
 </div>
 </body>

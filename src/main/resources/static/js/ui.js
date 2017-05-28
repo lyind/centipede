@@ -17,7 +17,7 @@
 "use strict";
 
 // UI helper
-(function(app, Rx)
+(function(app)
 {
     var ui = {};
 
@@ -31,4 +31,4 @@
     // publish
     Object.defineProperty(app, "ui", { value: ui });
     
-})(window.app, Rx);
+})(window.app);

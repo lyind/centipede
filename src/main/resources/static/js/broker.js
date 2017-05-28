@@ -17,116 +17,120 @@
  "use strict";
 
 // subject based observable broker
-(function(app, Rx)
+app.require([
+    "js/Rx.js"
+],
+function()
 {
-    var store = {};
-
-
-    // get an observable for a specific subject
-    // optionally set a new supplier function (must return an observable)
-    var broker = function(subject, supplier)
+    (function(app, Rx)
     {
-        subject = normalizeSubject(subject);
+        var store = {};
 
-        var channel = store[subject];
-        if (!channel)
+        // get an observable for a specific subject
+        // optionally set a new supplier function (must return an observable)
+        var broker = function(subject, supplier)
         {
-            channel = createChannel(function()
+            subject = normalizeSubject(subject);
+
+            var channel = store[subject];
+            if (!channel)
             {
-                // un-register from store after last subscriber disconnected
-                delete store[subject];
-            });
+                channel = createChannel(function()
+                {
+                    // un-register from store after last subscriber disconnected
+                    delete store[subject];
+                });
 
-            store[subject] = channel;
-        }
+                store[subject] = channel;
+            }
 
-        if (supplier)
+            if (supplier)
+            {
+                channel.supplier = supplier;
+            }
+
+            return channel;
+        };
+
+
+        // normalizes subject (array to string)
+        var normalizeSubject = function(subject)
         {
-            channel.supplier = supplier;
-        }
+            if (Array.isArray(subject))
+            {
+                return subject.join("/");
+            }
 
-        return channel;
-    };
+            return subject;
+        };
 
 
-    // normalizes subject (array to string)
-    var normalizeSubject = function(subject)
-    {
-        if (Array.isArray(subject))
+        // create a channel (an observer that never completes and has a ReplaySubject attached to it)
+        var createChannel = function(onDereference)
         {
-            return subject.join("/");
-        }
-
-        return subject;
-    };
-
-
-    // create a channel (an observer that never completes and has a ReplaySubject attached to it)
-    var createChannel = function(onDereference)
-    {
-        return function(onDereference)
-        {
-            var onDereference = onDereference;
-            var observer = this;
-            var supplier = undefined;
-            var subscription = undefined;
-            var cache = new Rx.ReplaySubject(1);
-
-            // output observable with added method request()
-            var observable = cache.asObservable().finally(destructor).publishReplay(1).refCount();
-            observable.pull = function()
+            return function(onDereference)
             {
-                // un-subscribe from previous source
-                if (subscription)
+                var onDereference = onDereference;
+                var observer = this;
+                var supplier = undefined;
+                var subscription = undefined;
+                var cache = new Rx.ReplaySubject(1);
+
+                // output observable with added method request()
+                var observable = cache.asObservable().finally(destructor).publishReplay(1).refCount();
+                observable.pull = function()
                 {
-                    subscription.unsubscribe();
-                }
+                    // un-subscribe from previous source
+                    if (subscription)
+                    {
+                        subscription.unsubscribe();
+                    }
 
-                var newValue = supplier();
-                subscription = newValue.subscribe(observer);
-                if (newValue.pull)
+                    var newValue = supplier();
+                    subscription = newValue.subscribe(observer);
+                    if (newValue.pull)
+                    {
+                        // allow broker subjects to connect to broker subjects
+                        newValue.pull();
+                    }
+                };
+
+                // implement Observer methods: closed(), next(), error() and complete()
+                closed = function() { return false; };
+
+                next = function(value) { cache.next(value); };
+
+                error = function(e)
                 {
-                    // allow broker subjects to connect to broker subjects
-                    newValue.pull();
-                }
-            };
+                    console.log("channel encountered error");
+                    cache.error(e);
+                };
 
-            // implement Observer methods: closed(), next(), error() and complete()
-            closed = function() { return false; };
-
-            next = function(value) { cache.next(value); };
-
-            error = function(e)
-            {
-                console.log("channel encountered error");
-                cache.error(e);
-            };
-
-            complete = function()
-            {
-                // ignore, we never complete
-            };
-
-            // destructor (called after the last subscriber disconnected)
-            destructor = function()
-            {
-                console.log("destroying value");
-
-                if (subscription)
+                complete = function()
                 {
-                    subscription.unsubscribe();
-                }
+                    // ignore, we never complete
+                };
 
-                if (onDereference)
+                // destructor (called after the last subscriber disconnected)
+                destructor = function()
                 {
-                    onDereference();
-                }
-            };
-        }(onDereference);
-    };
+                    console.log("destroying value");
 
-    
-    // publish
-    Object.defineProperty(app, "broker", { value: broker });
+                    if (subscription)
+                    {
+                        subscription.unsubscribe();
+                    }
 
-})(window.app, Rx);
+                    if (onDereference)
+                    {
+                        onDereference();
+                    }
+                };
+            }(onDereference);
+        };
+
+        // publish
+        Object.defineProperty(app, "broker", { value: broker });
+
+    })(window.app, window.Rx);
+});

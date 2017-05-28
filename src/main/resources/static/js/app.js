@@ -17,11 +17,16 @@
 "use strict";
 
 // Application entry point
-(function(window)
+(function(window, document)
 {
-    // only load if not loaded already (for example after a document switch)
+    // first, check if we are already loaded
+    // start by loading external libraries and then our application
     if (!window.app)
     {
+        var requireStore = {};
+        var scheduled = [];
+        var isMounted = false;
+
         var loadViaTag = function(url, onLoad)
         {
             var script = document.createElement('script');
@@ -31,27 +36,118 @@
         };
 
 
-        // load an array of scripts from the specified urls and execute callback when all are loaded
+        var getBasePath = function()
+        {
+            return document.location.pathname;
+        }
+
+
+        var canonicalizePath = function(relativePath)
+        {
+            var relativeSegments = relativePath.split("/");
+
+            // handle absolute paths
+            var basePath = "";
+            if (relativeSegments.length <= 0 || relativeSegments[0] !== "")
+            {
+                basePath = getBasePath();
+            }
+
+            var segments = basePath.split("/");
+            if (segments.length > 1)
+            {
+                segments.pop();
+            }
+
+            for (var i = 0; i < relativeSegments.length; ++i)
+            {
+                var segment = relativeSegments[i];
+                if (segment !== ".")
+                {
+                    if (segment === "..")
+                    {
+                        segments.pop();
+                    }
+                    else
+                    {
+                        segments.push(segment);
+                    }
+                }
+            }
+
+            return segments.join("/");
+        };
+
+
+        // Load scripts at the specified URLs and execute callback after all have been loaded.
         var require = function(urls, onComplete)
         {
-            var urlsToLoad = (urls.constructor === Array) ? urls.slice() : [urls];
+            urls = (urls.constructor === Array) ? urls : [urls];
 
-            urls.forEach(function(url)
+            var urlsToLoad = urls.map(canonicalizePath);
+
+            var considerComplete = function(url, isJustLoaded)
             {
-                loadViaTag(url, function()
+                if (isJustLoaded)
                 {
-                    var i = urlsToLoad.indexOf(url);
-                    if (i > -1)
-                    {
-                        urlsToLoad.splice(i, 1);
-                    }
+                    requireStore[url] = true;
+                }
 
-                    if (urlsToLoad.length === 0)
+                for (var i = 0; i < urlsToLoad.length; ++i)
+                {
+                    if (urlsToLoad[i] === url)
                     {
-                        onComplete();
+                        urlsToLoad[i] = undefined;
                     }
-                });
+                }
+
+                // nothing else to load? done.
+                if (!urlsToLoad.some(function(url) { return url !== undefined; }))
+                {
+                    onComplete();
+                }
+            };
+
+            urlsToLoad.forEach(function(url)
+            {
+                if (url != null)
+                {
+                    if (Object.prototype.hasOwnProperty.call(requireStore, url))
+                    {
+                        considerComplete(url, false);
+                    }
+                    else
+                    {
+                        requireStore[url] = false;
+                        loadViaTag(url, function() { considerComplete(url, true); });
+                    }
+                }
             });
+        };
+
+        // schedule a function to run after the app has been mounted
+        // the function will be passed the app instance as first argument
+        var schedule = function(fn)
+        {
+            if (!isMounted)
+            {
+                scheduled.push(fn);
+            }
+            else
+            {
+                fn();
+            }
+        };
+
+
+        // run scheduled functions
+        var runScheduled = function()
+        {
+            var job = undefined;
+            while((job = scheduled.shift()) != null)
+            {
+                job(window.app);
+            }
         };
 
 
@@ -60,28 +156,36 @@
         {
             var app = {};
 
-            // publish app root object
+            // publish app API methods
+            Object.defineProperty(app, "getBasePath", { value: getBasePath });
+            Object.defineProperty(app, "canonicalizePath", { value: canonicalizePath });
             Object.defineProperty(app, "require", { value: require });
+            Object.defineProperty(app, "schedule", { value: schedule });
+            Object.defineProperty(app, "runScheduled", { value: runScheduled });
 
-            // publish require method
+            // publish app root object
             Object.defineProperty(window, "app", { value: app });
 
+            // load core components
             require([
                 "js/broker.js",
-                "js/cell.js",
+                "js/ui.js",
                 "js/centipede-splitter.js",
                 "js/ws.js"
             ],
-            function() {console.log("app ready")});
+            function()
+            {
+                console.log("mounting app");
+
+                app.runScheduled();
+                isMounted = true;
+
+                console.log("app mounted at: " + getBasePath());
+            });
         };
 
-        // first, check if we are already loaded
-        // start by loading external libraries and then our application
-        require([
-            "js/Rx.js"
-        ],
-        bootstrapApp);
+        bootstrapApp();
     }
 
-})(window);
+})(window, document);
 

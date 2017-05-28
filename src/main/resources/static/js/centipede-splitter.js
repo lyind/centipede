@@ -17,48 +17,55 @@
 "use strict";
 
 // Centipede splitter
-(function(app, Rx)
+app.require([
+    "js/Rx.js",
+    "js/broker.js"
+],
+function()
 {
-    const SERVICES = "services";
-    const TOKEN = "token";
-    const ERROR = "error";
-    const OVERFLOW = "overflow";
-
-    var splitter = function(broker, message)
+    (function(app, broker, Rx)
     {
-        if (message.services != null)
-        {
-            broker(SERVICES, function() { return Rx.Observable.of(message.services); });
-        }
-        if (message.token != null)
-        {
-            broker(TOKEN, function() { return Rx.Observable.of(message.services); });
-        }
-        if (message.error != null)
-        {
-            broker(ERROR, function() { return Rx.Observable.of(message.error); });
-        }
-        if (message.overflow != null)
-        {
-            broker(OVERFLOW, function() { return Rx.Observable.of(true); });
-        }
-    };
+        const SERVICES = "services";
+        const TOKEN = "token";
+        const ERROR = "error";
+        const OVERFLOW = "overflow";
 
-    // publish constant subject IDs
-    if (!app.subjects)
-    {
-        Object.defineProperty(app, "subjects", { value: {} });
-    }
-    Object.defineProperty(app.subjects, SERVICES, { value: SERVICES });
-    Object.defineProperty(app.subjects, TOKEN, { value: TOKEN });
-    Object.defineProperty(app.subjects, ERROR, { value: ERROR });
-    Object.defineProperty(app.subjects, OVERFLOW, { value: OVERFLOW });
+        var splitter = function(broker, message)
+        {
+            if (message.services != null)
+            {
+                broker(SERVICES, function() { return Rx.Observable.of(message.services); });
+            }
+            if (message.token != null)
+            {
+                broker(TOKEN, function() { return Rx.Observable.of(message.services); });
+            }
+            if (message.error != null)
+            {
+                broker(ERROR, function() { return Rx.Observable.of(message.error); });
+            }
+            if (message.overflow != null)
+            {
+                broker(OVERFLOW, function() { return Rx.Observable.of(true); });
+            }
+        };
 
-    // publish splitter
-    if (!app.splitters)
-    {
-        Object.defineProperty(app, "splitters", { value: [] });
-    }
-    app.splitters.push(splitter);
+        // publish constant subject IDs
+        if (!app.subjects)
+        {
+            Object.defineProperty(app, "subjects", { value: {} });
+        }
+        Object.defineProperty(app.subjects, SERVICES, { value: SERVICES });
+        Object.defineProperty(app.subjects, TOKEN, { value: TOKEN });
+        Object.defineProperty(app.subjects, ERROR, { value: ERROR });
+        Object.defineProperty(app.subjects, OVERFLOW, { value: OVERFLOW });
 
-})(window.app, Rx);
+        // publish splitter
+        if (!app.splitters)
+        {
+            Object.defineProperty(app, "splitters", { value: [] });
+        }
+        app.splitters.push(splitter);
+
+    })(window.app, window.app.broker, window.Rx);
+});
