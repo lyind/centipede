@@ -19,19 +19,35 @@
 // Application entry point
 (function(window, document)
 {
+    console.log("[app] init");
     // first, check if we are already loaded
     // start by loading external libraries and then our application
     if (!window.app)
     {
         var requireStore = {};
+        var requireStack = [];
         var scheduled = [];
         var isMounted = false;
 
-        var loadViaTag = function(url, onLoad)
+        var loadViaTag = function(url)
         {
+            console.log("[app] load: " + url);
             var script = document.createElement('script');
             script.src = url;
-            script.onload = onLoad;
+
+            // notify waiters
+            script.onload = function()
+            {
+                console.log("[app] loaded: " + url);
+                var callbacks = requireStore[url];
+
+                var cb = undefined;
+                while((cb = callbacks.pop()))
+                {
+                    cb();
+                }
+            };
+
             document.head.appendChild(script);
         };
 
@@ -79,63 +95,123 @@
         };
 
 
+        // test if a value is an object
+        var isObject = function(value)
+        {
+            return value === Object(value);
+        };
+
+
         // Load scripts at the specified URLs and execute callback after all have been loaded.
         var require = function(urls, onComplete)
         {
             urls = (urls.constructor === Array) ? urls : [urls];
 
+            var request = { done: false, onComplete: onComplete };
             var urlsToLoad = urls.map(canonicalizePath);
 
-            var considerComplete = function(url, isJustLoaded)
+            var considerComplete = function(loadedUrl)
             {
-                if (isJustLoaded)
-                {
-                    requireStore[url] = true;
-                }
-
                 for (var i = 0; i < urlsToLoad.length; ++i)
                 {
-                    if (urlsToLoad[i] === url)
+                    if (urlsToLoad[i] === loadedUrl)
                     {
                         urlsToLoad[i] = undefined;
                     }
                 }
 
                 // nothing else to load? done.
-                if (!urlsToLoad.some(function(url) { return url !== undefined; }))
+                if (!urlsToLoad.some(function(url) { return (!!url); }))
                 {
-                    onComplete();
+                    // mark this request as done
+                    request.done = true;
+
+                    // finish all completed requests and pop them from the dependency stack
+                    for (var i = requireStack.length - 1; i >= 0; --i)
+                    {
+                        // last request left or already marked as done?
+                        if (requireStack[i].done)
+                        {
+                            requireStack.pop().onComplete();
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
                 }
             };
 
+            if (urlsToLoad.length === 0)
+            {
+                onComplete();
+            }
+
+            requireStack.push(request);
+
             urlsToLoad.forEach(function(url)
             {
-                if (url != null)
+                var isNewRequest = !Object.prototype.hasOwnProperty.call(requireStore, url);
+                if (!isNewRequest && requireStore[url].length == 0)
                 {
-                    if (Object.prototype.hasOwnProperty.call(requireStore, url))
+                    considerComplete(url);
+                }
+                else
+                {
+                    var onLoad = function()
                     {
-                        considerComplete(url, false);
+                        considerComplete(url);
+                    };
+
+                    if (isNewRequest)
+                    {
+                        requireStore[url] = [onLoad];
+                        loadViaTag(url);
                     }
                     else
                     {
-                        requireStore[url] = false;
-                        loadViaTag(url, function() { considerComplete(url, true); });
+                        requireStore[url].push(onLoad);
                     }
                 }
             });
         };
 
+
+        // find the parent of the last loaded <script> tag
+        var findComponent = function()
+        {
+            if (document.scripts.length > 0)
+            {
+                var scriptTag = document.scripts[document.scripts.length - 1];
+                if (scriptTag)
+                {
+                    return scriptTag.parentNode;
+                }
+            }
+
+            return undefined;
+        };
+
+
         // schedule a function to run after the app has been mounted
         // the function will be passed the app instance as first argument
+        // the DOM element that is parent to the calling <script> element will be passed as second argument
         var schedule = function(fn)
         {
+            var root = findComponent();
+            var task = fn;
+            if (root !== undefined)
+            {
+                task = function(app) { fn(app, root); };
+            }
+
             if (!isMounted)
             {
-                scheduled.push(fn);
+                scheduled.push(task);
             }
             else
             {
-                fn();
+                task();
             }
         };
 
@@ -146,7 +222,7 @@
             var job = undefined;
             while((job = scheduled.shift()) != null)
             {
-                job(window.app);
+                job(this);
             }
         };
 
@@ -162,16 +238,18 @@
             Object.defineProperty(app, "require", { value: require });
             Object.defineProperty(app, "schedule", { value: schedule });
             Object.defineProperty(app, "runScheduled", { value: runScheduled });
+            Object.defineProperty(app, "isObject", { value: isObject });
 
             // publish app root object
             Object.defineProperty(window, "app", { value: app });
 
             // load core components
             require([
-                "js/broker.js",
-                "js/ui.js",
-                "js/centipede-splitter.js",
-                "js/ws.js"
+                "core/broker.js",
+                "core/ui.js",
+                "core/centipede-splitter.js",
+                "core/ws.js",
+                "core/http.js"
             ],
             function()
             {

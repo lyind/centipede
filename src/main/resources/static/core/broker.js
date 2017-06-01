@@ -18,10 +18,12 @@
 
 // subject based observable broker
 app.require([
-    "js/Rx.js"
+    "lib/Rx.js"
 ],
 function()
 {
+    console.log("[broker] init");
+
     (function(app, Rx)
     {
         var store = {};

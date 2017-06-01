@@ -18,11 +18,13 @@
 
 // WebSocket subject (ws) sub-protocol client
 app.require([
-    "js/Rx.js",
-    "js/broker.js"
+    "lib/Rx.js",
+    "core/broker.js"
 ],
 function()
 {
+    console.log("[ws] init");
+
     (function(app, Rx, broker)
     {
         var ws = {};

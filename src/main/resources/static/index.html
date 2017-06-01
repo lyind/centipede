@@ -3,17 +3,32 @@
 <head>
     <meta charset="utf-8"/>
     <title>Centipede</title>
-    <script src="js/app.js"></script>
+    <script src="core/app.js"></script>
+    <script src="info-fragment.js"></script>
 </head>
-<body>
+<body id="info-container">
 <h1>Hello</h1>
 <div>
     <script>
-    app.schedule(function()
+    console.log("[index] init");
+    app.schedule(function(app, root)
     {
-        var root = window.app.ui.findComponent();
+        console.log("[index] ready");
+        var serviceEditHref = "service-edit.html";
+        var serviceEditLink = document.createElement('a');
 
-        root.textContent = "Ready.";
+        serviceEditLink.href = serviceEditHref;
+        serviceEditLink.onclick = function(e)
+        {
+            console.log("[index] service edit link: click");
+            window.app.switchDocument(serviceEditHref);
+
+            e.stopPropagation();
+            return false;
+        };
+        serviceEditLink.textContent = "Edit service";
+
+        root.appendChild(serviceEditLink);
     });
     </script>
 </div>

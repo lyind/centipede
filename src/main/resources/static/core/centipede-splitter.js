@@ -18,11 +18,13 @@
 
 // Centipede splitter
 app.require([
-    "js/Rx.js",
-    "js/broker.js"
+    "lib/Rx.js",
+    "core/broker.js"
 ],
 function()
 {
+    console.log("[centipede-splitter] init");
+
     (function(app, broker, Rx)
     {
         const SERVICES = "services";
