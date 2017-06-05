@@ -29,16 +29,17 @@ function()
     {
         var html5doctype = document.implementation.createDocumentType( 'html', '', '');
         var keepStore = document.implementation.createDocument('', 'html', html5doctype);
+        var encounteredScriptUrls = {};
 
-        var cloneKeepAnnotated = function(sourceDocument, targetDocument)
+        var placeKeepAnnotated = function(sourceDocument, targetDocument)
         {
             var nodesToKeep = [];
-            var nodesToKeepFromCurrent = sourceDocument.querySelectorAll("[keep]");
+            var nodesToKeepFromCurrent = sourceDocument.querySelectorAll("[data-keep]");
             for (var i = 0; i < nodesToKeepFromCurrent.length; ++i)
             {
                 nodesToKeep.push(nodesToKeepFromCurrent[i]);
             }
-            var nodesToKeepFromStore = keepStore.querySelectorAll("[keep]");
+            var nodesToKeepFromStore = keepStore.querySelectorAll("[data-keep]");
             for (var i = 0; i < nodesToKeepFromStore.length; ++i)
             {
                 nodesToKeep.push(nodesToKeepFromStore[i]);
@@ -50,12 +51,18 @@ function()
             {
                 var sourceNode = nodesToKeep[i];
                 var sourceNodeParent = sourceNode.parentNode;
-                var parentId = sourceNode.attributes.keep.value;
-                if (parentId)
+                var id = sourceNode.attributes.id.value;
+                if (id)
                 {
-                    var newParent = targetDocument.getElementById(parentId);
-                    var importTarget = targetDocument;
-                    if (!newParent)
+                    var template = targetDocument.getElementById(id);
+                    if (template)
+                    {
+                        // replace template with the "data-keep" annotated thing
+                        var node = targetDocument.importNode(sourceNode, true);
+                        template.parent.replaceChild(node, template);
+                        sourceNodeParent.removeChild(sourceNode);
+                    }
+                    else
                     {
                         if (sourceNode.ownerDocument === keepStore)
                         {
@@ -64,38 +71,77 @@ function()
                         }
 
                         // keep stashed away in store
-                        newParent = keepStore.documentElement;
-                        importTarget = keepStore;
+                        var node = keepStore.importNode(sourceNode, true);
+                        keepStore.documentElement.appendChild(node);
+                        sourceNodeParent.removeChild(sourceNode);
                     }
-
-                    var node = importTarget.importNode(sourceNode, true);
-                    newParent.appendChild(node);
-                    sourceNodeParent.removeChild(sourceNode);
                 }
                 else
                 {
-                    console.warn("[ui] attribute keep without ID on element: ", sourceNode.nodeName);
+                    console.error("[ui] element with attr. data-keep but no id: ", sourceNode.nodeName);
                 }
             }
         };
 
-        var switchDocument = function(relativePath)
+
+        // lookup the template element with "id", check if it has not been rendered before
+        // and call onRender passing the element to fill as first argument
+        var renderKeepable = function(id, onRender)
         {
+            var keepableElement = document.getElementById(id)
+            if (keepableElement)
+            {
+                if (!keepableElement.classList.contains("keep"))
+                {
+                    onRender(keepableElement);
+                    keepableElement.classList.add("keep");
+                }
+            }
+        };
+
+
+        var extractQuery = function(pathAndQuery)
+        {
+            var iQueryStart = pathAndQuery.indexOf('?');
+            if (iQueryStart >= 0)
+            {
+                return pathAndQuery.slice(iQueryStart);
+            }
+            return "";
+        };
+
+
+        var stripQuery = function(pathAndQuery)
+        {
+            var iQueryStart = pathAndQuery.indexOf('?');
+            if (iQueryStart >= 0)
+            {
+                return pathAndQuery.slice(0, iQueryStart);
+            }
+            return pathAndQuery;
+        };
+
+
+        var navigate = function(relativePath)
+        {
+            var query = extractQuery(relativePath);
+            var canonicalPath = app.canonicalizePath(stripQuery(relativePath));
+
             // copied from
             var currentDocument = document;
 
-            this.GET(relativePath, "document", {}).subscribe(function(newDocument)
+            this.GET(canonicalPath, "document", {}).subscribe(function(newDocument)
             {
-                console.log("1");
-                cloneKeepAnnotated(currentDocument, newDocument);
                 try
                 {
+                    // place persistent elements with "keep=PARENT_ID" attribute
+                    placeKeepAnnotated(currentDocument, newDocument);
+
                     // keep script urls to allow for de-duplication to avoid reloading scripts already present
-                    var livePreviousScripts = newDocument.getElementsByTagName("SCRIPT");
-                    var previousScriptSources = [];
+                    var livePreviousScripts = currentDocument.getElementsByTagName("SCRIPT");
                     for (var i = 0; i < livePreviousScripts.length; ++i)
                     {
-                        previousScriptSources.push(livePreviousScripts[i].src);
+                        encounteredScriptUrls[livePreviousScripts[i].src] = null;
                     }
 
                     // perform document replace
@@ -120,9 +166,9 @@ function()
                         var script = liveScripts[i];
                         if (script.parentNode.nodeName === "HEAD")
                         {
-                            if (previousScriptSources.indexOf(script.src) >= 0)
+                            if (Object.prototype.hasOwnProperty.call(encounteredScriptUrls, script.src))
                             {
-                                console.log("[ui] skip refreshing: ", script.src);
+                                console.log("[ui] skip: ", script.src);
                                 continue;  // skip this script
                             }
                         }
@@ -160,21 +206,26 @@ function()
                 if (title.length > 0)
                 {
                     title = title.value;
-                }
-                var canonicalPath = app.canonicalizePath(relativePath);
-                window.history.pushState({"url": canonicalPath}, title, canonicalPath);
+                };
+
+                window.history.pushState({"url": canonicalPath}, title, canonicalPath + query);
+
+                // call on load handlers
+                window.dispatchEvent(new Event("load"));
             },
             function(e)
             {
                 console.log("document switch failed");
-                console.error("failed to request: " + relativePath + ": " + e.toString());
+                console.error("failed to request: " + canonicalPath + ": " + e.toString());
             });
 
             console.log("[ui] switchDocument scheduled");
         };
 
         // publish methods
-        Object.defineProperty(app, "switchDocument", { value: switchDocument });
+        Object.defineProperty(app, "navigate", { value: navigate });
+        Object.defineProperty(app, "renderKeepable", { value: renderKeepable });
+
 
     })(window.app, document, window.Rx);
 

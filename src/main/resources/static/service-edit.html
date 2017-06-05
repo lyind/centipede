@@ -2,12 +2,13 @@
 <html>
 <head>
     <meta charset="utf-8"/>
-    <title>Centipede</title>
+    <title>Centipede - Edit Service</title>
     <script src="core/app.js"></script>
 </head>
 <body>
 <h1>Hello</h1>
 <div>
+    <div id="profile.fragment"></div>
     <script>
     console.log("[service-edit] init");
     app.schedule(function(app, root)
@@ -22,7 +23,7 @@
         backLink.onclick = function(e)
         {
             console.log("[service-edit] back link: click");
-            window.app.switchDocument(backHref);
+            window.app.navigate(backHref);
 
             e.stopPropagation();
             return false;

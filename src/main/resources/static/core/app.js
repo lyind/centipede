@@ -91,7 +91,7 @@
                 }
             }
 
-            return segments.join("/");
+            return (segments.length === 0) ? "/" : segments.join("/");
         };
 
 
@@ -177,14 +177,6 @@
         };
 
 
-        var isLoaded = function(path)
-        {
-            path = canonicalizePath(path);
-            var isRequested = Object.prototype.hasOwnProperty.call(requireStore, path);
-            return (isRequested && requireStore[path].length == 0);
-        };
-
-
         // find the parent of the last loaded <script> tag
         var findComponent = function()
         {
@@ -244,7 +236,6 @@
             Object.defineProperty(app, "getBasePath", { value: getBasePath });
             Object.defineProperty(app, "canonicalizePath", { value: canonicalizePath });
             Object.defineProperty(app, "require", { value: require });
-            Object.defineProperty(app, "isLoaded", { value: isLoaded });
             Object.defineProperty(app, "schedule", { value: schedule });
             Object.defineProperty(app, "runScheduled", { value: runScheduled });
             Object.defineProperty(app, "isObject", { value: isObject });

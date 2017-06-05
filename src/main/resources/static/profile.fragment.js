@@ -22,31 +22,31 @@ app.require([
 ],
 function()
 {
+    console.log("[profile-fragment] init");
     (function(app, document)
     {
-        var renderInfo = function()
+        var onRenderProfileFragment = function(keepable)
         {
-            var test = document.createElement('p');
+            var profile = document.createElement('div');
+            profile.classList.add("profile");
+            profile.textContent = "ADMIN";
 
-            test.setAttribute("keep", "info-container");
-            test.onclick = function()
+            var profileLogout = document.createElement('button');
+            profileLogout.textContent = "Logout";
+            profileLogout.onclick = function()
             {
-                alert("Test area clicked!");
+                alert("Logout clicked!");
                 return false;
             };
-            test.textContent = "Some permanent thing (test click event)";
 
-            var body = document.getElementsByTagName("body");
-            if ((!!body.length))
-            {
-                body[0].appendChild(test);
-            }
+            var profileNode = keepable.appendChild(profile);
+            profileNode.appendChild(profileLogout);
         };
 
-        // draw info fragment button on load
+        // draw profile fragment button on load
         window.addEventListener('load', function()
         {
-            renderInfo();
+            app.renderKeepable("profile.fragment", onRenderProfileFragment);
         });
 
     })(window.app, document);

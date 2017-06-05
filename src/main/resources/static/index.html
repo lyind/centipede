@@ -2,26 +2,27 @@
 <html>
 <head>
     <meta charset="utf-8"/>
-    <title>Centipede</title>
+    <title>Centipede Index</title>
     <script src="core/app.js"></script>
-    <script src="info-fragment.js"></script>
+    <script src="profile.fragment.js"></script>
 </head>
-<body id="info-container">
+<body>
 <h1>Hello</h1>
+<div id="profile.fragment"></div>
 <div>
     <script>
     console.log("[index] init");
     app.schedule(function(app, root)
     {
         console.log("[index] ready");
-        var serviceEditHref = "service-edit.html";
+        var serviceEditHref = "service-edit.html?id=123";
         var serviceEditLink = document.createElement('a');
 
         serviceEditLink.href = serviceEditHref;
         serviceEditLink.onclick = function(e)
         {
             console.log("[index] service edit link: click");
-            window.app.switchDocument(serviceEditHref);
+            window.app.navigate(serviceEditHref);
 
             e.stopPropagation();
             return false;
