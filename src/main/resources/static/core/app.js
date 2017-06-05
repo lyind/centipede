@@ -95,33 +95,33 @@
         };
 
 
-        // test if a value is an object
+        // Test if a value is an object
         var isObject = function(value)
         {
             return value === Object(value);
         };
 
 
-        // Load scripts at the specified URLs and execute callback after all have been loaded.
-        var require = function(urls, onComplete)
+        // Load scripts at the specified paths and execute callback after all have been loaded.
+        var require = function(paths, onComplete)
         {
-            urls = (urls.constructor === Array) ? urls : [urls];
+            paths = (paths.constructor === Array) ? paths : [paths];
 
             var request = { done: false, onComplete: onComplete };
-            var urlsToLoad = urls.map(canonicalizePath);
+            var pathsToLoad = paths.map(canonicalizePath);
 
-            var considerComplete = function(loadedUrl)
+            var considerComplete = function(loadedPath)
             {
-                for (var i = 0; i < urlsToLoad.length; ++i)
+                for (var i = 0; i < pathsToLoad.length; ++i)
                 {
-                    if (urlsToLoad[i] === loadedUrl)
+                    if (pathsToLoad[i] === loadedPath)
                     {
-                        urlsToLoad[i] = undefined;
+                        pathsToLoad[i] = undefined;
                     }
                 }
 
                 // nothing else to load? done.
-                if (!urlsToLoad.some(function(url) { return (!!url); }))
+                if (!pathsToLoad.some(function(path) { return (!!path); }))
                 {
                     // mark this request as done
                     request.done = true;
@@ -142,38 +142,46 @@
                 }
             };
 
-            if (urlsToLoad.length === 0)
+            if (pathsToLoad.length === 0)
             {
                 onComplete();
             }
 
             requireStack.push(request);
 
-            urlsToLoad.forEach(function(url)
+            pathsToLoad.forEach(function(path)
             {
-                var isNewRequest = !Object.prototype.hasOwnProperty.call(requireStore, url);
-                if (!isNewRequest && requireStore[url].length == 0)
+                var isRequested = Object.prototype.hasOwnProperty.call(requireStore, path);
+                if (isRequested && requireStore[path].length == 0)
                 {
-                    considerComplete(url);
+                    considerComplete(path);
                 }
                 else
                 {
                     var onLoad = function()
                     {
-                        considerComplete(url);
+                        considerComplete(path);
                     };
 
-                    if (isNewRequest)
+                    if (isRequested)
                     {
-                        requireStore[url] = [onLoad];
-                        loadViaTag(url);
+                        requireStore[path].push(onLoad);
                     }
                     else
                     {
-                        requireStore[url].push(onLoad);
+                        requireStore[path] = [onLoad];
+                        loadViaTag(path);
                     }
                 }
             });
+        };
+
+
+        var isLoaded = function(path)
+        {
+            path = canonicalizePath(path);
+            var isRequested = Object.prototype.hasOwnProperty.call(requireStore, path);
+            return (isRequested && requireStore[path].length == 0);
         };
 
 
@@ -236,6 +244,7 @@
             Object.defineProperty(app, "getBasePath", { value: getBasePath });
             Object.defineProperty(app, "canonicalizePath", { value: canonicalizePath });
             Object.defineProperty(app, "require", { value: require });
+            Object.defineProperty(app, "isLoaded", { value: isLoaded });
             Object.defineProperty(app, "schedule", { value: schedule });
             Object.defineProperty(app, "runScheduled", { value: runScheduled });
             Object.defineProperty(app, "isObject", { value: isObject });

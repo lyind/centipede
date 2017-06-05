@@ -114,6 +114,7 @@ function()
                     // enforce script execution
                     var liveScripts = currentDocument.getElementsByTagName("SCRIPT");
                     var scripts = [];
+                    var basePath = window.location;
                     for (var i = 0; i < liveScripts.length; ++i)
                     {
                         var script = liveScripts[i];
