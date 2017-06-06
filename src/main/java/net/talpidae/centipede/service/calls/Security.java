@@ -72,7 +72,7 @@ public class Security implements CallHandler
         val token = request.getToken();
         if (!Strings.isNullOrEmpty(token))
         {
-            val securityContext = authenticationRequestFilter.evaluateToken(token);
+            val securityContext = authenticationRequestFilter.createSecurityContext(token);
             if (securityContext != null)
             {
                 request.getContext().setSecurityContext(securityContext);
