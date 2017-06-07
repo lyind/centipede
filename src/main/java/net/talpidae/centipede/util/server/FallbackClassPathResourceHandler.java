@@ -21,6 +21,7 @@ public class FallbackClassPathResourceHandler extends ResourceHandler implements
     {
         // rewrite to serve root/index.html instead of the (non-existing) relative path specified by the client
         exchange.setRelativePath("");
+        exchange.setRequestPath("/");
 
         super.handleRequest(exchange);
     }

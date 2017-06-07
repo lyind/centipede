@@ -24,6 +24,12 @@
     // start by loading external libraries and then our application
     if (!window.app)
     {
+        var appRoot = (function()
+        {
+          var root = document.scripts[document.scripts.length - 1].src;
+          return root.replace(/core\/app\.js$/, "");
+        })();
+
         var requireStore = {};
         var requireStack = [];
         var scheduled = [];
@@ -54,7 +60,8 @@
 
         var getBasePath = function()
         {
-            return document.location.pathname;
+            //return document.location.pathname;
+            return appRoot;
         }
 
 
@@ -107,7 +114,7 @@
         {
             paths = (paths.constructor === Array) ? paths : [paths];
 
-            var request = { done: false, onComplete: onComplete };
+            var request = { done: false, "onComplete": onComplete };
             var pathsToLoad = paths.map(canonicalizePath);
 
             var considerComplete = function(loadedPath)
@@ -132,7 +139,11 @@
                         // last request left or already marked as done?
                         if (requireStack[i].done)
                         {
-                            requireStack.pop().onComplete();
+                            var otherRequest = requireStack.pop();
+                            if (otherRequest.onComplete)
+                            {
+                                otherRequest.onComplete();
+                            }
                         }
                         else
                         {
@@ -144,7 +155,11 @@
 
             if (pathsToLoad.length === 0)
             {
-                onComplete();
+                if (onComplete)
+                {
+                    onComplete();
+                }
+                return;
             }
 
             requireStack.push(request);
@@ -227,6 +242,17 @@
         };
 
 
+        // redirect to actual component, if not at root
+        var doRedirect = function()
+        {
+            var path = window.location.pathname;
+            if (path !== "/" && path !== "/index.html")
+            {
+                window.app.navigate(window.location.pathname + window.location.hash + window.location.search);
+            }
+        };
+
+
         // load application parts
         var bootstrapApp = function()
         {
@@ -259,6 +285,8 @@
                 isMounted = true;
 
                 console.log("app mounted at: " + getBasePath());
+
+                doRedirect();
             });
         };
 
