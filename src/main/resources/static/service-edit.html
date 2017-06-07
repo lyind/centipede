@@ -9,28 +9,23 @@
 <h1>Hello</h1>
 <div>
     <div id="profile.fragment"></div>
+    <p>Ready (would show service details here)</p>
+    <br />
+    <a class="back-link" href="..">Back</a>
     <script>
     console.log("[service-edit] init");
     app.schedule(function(app, root)
     {
         console.log("[service-edit] ready");
-        root.appendChild(document.createTextNode("Ready (would show service details here)"));
 
-        var backHref = "..";
-        var backLink = document.createElement('a');
-
-        backLink.href = backHref;
-        backLink.onclick = function(e)
+        Rx.Observable.fromEvent(root.querySelectorAll(".back-link"), 'click').subscribe(function(e)
         {
-            console.log("[service-edit] back link: click");
-            window.app.navigate(backHref);
+            console.log("[service-edit] back link: click: " + e.target.getAttribute('href'));
+            window.app.navigate(e.target.getAttribute('href'));
 
             e.stopPropagation();
-            return false;
-        };
-        backLink.textContent = "Back";
-
-        root.appendChild(backLink);
+            e.preventDefault();
+        });
     });
     </script>
 </div>

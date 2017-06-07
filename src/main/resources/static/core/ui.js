@@ -19,7 +19,7 @@
 // UI helper
 app.require([
     "lib/Rx.js",
-    "core/http.js",
+    "core/http.js"
 ],
 function()
 {
@@ -121,11 +121,16 @@ function()
             return pathAndQuery;
         };
 
+        // TODO implement strip args
 
         var navigate = function(relativePath)
         {
             var query = extractQuery(relativePath);
+
+            // TODO strip query, then strip args
+
             var canonicalPath = app.canonicalizePath(stripQuery(relativePath));
+            //var canoncialPathNoArgs = stripArgs(canoncialPath);
 
             // copied from
             var currentDocument = document;
@@ -215,8 +220,7 @@ function()
             },
             function(e)
             {
-                console.log("document switch failed");
-                console.error("failed to request: " + canonicalPath + ": " + e.toString());
+                console.error("[ui] failed to request and switch to: " + canonicalPath + ": ", e);
             });
 
             console.log("[ui] switchDocument scheduled");

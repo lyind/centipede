@@ -10,28 +10,21 @@
 <h1>Hello</h1>
 <div id="profile.fragment"></div>
 <div>
+    <a class="service-link" href="service-edit.html?id=123">Edit Service #123</a>
     <script>
-    console.log("[index] init");
     app.schedule(function(app, root)
     {
-        console.log("[index] ready");
-        var serviceEditHref = "service-edit.html?id=123";
-        var serviceEditLink = document.createElement('a');
-
-        serviceEditLink.href = serviceEditHref;
-        serviceEditLink.onclick = function(e)
+        Rx.Observable.fromEvent(root.querySelectorAll(".service-link"), 'click').subscribe(function(e)
         {
-            console.log("[index] service edit link: click");
-            window.app.navigate(serviceEditHref);
+            console.log("[index] service edit link: click: " + e.target.getAttribute('href'));
+            window.app.navigate(e.target.getAttribute('href'));
 
             e.stopPropagation();
-            return false;
-        };
-        serviceEditLink.textContent = "Edit service";
-
-        root.appendChild(serviceEditLink);
+            e.preventDefault();
+        });
     });
     </script>
+
 </div>
 </body>
 </html>

@@ -61,10 +61,12 @@ function()
                         }
                         else
                         {
-                            var error = new Error(request.statusText);
-                            error.status = request.status;
+                            var error = {
+                                code: request.status,
+                                message: request.statusText
+                            };
 
-                            throw error;
+                            observer.error(error);
                         }
                     }
                 };
