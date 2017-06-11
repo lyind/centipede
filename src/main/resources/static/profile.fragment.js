@@ -22,10 +22,12 @@ app.require([
 ],
 function()
 {
+
     console.log("[profile-fragment] init");
     (function(app, document)
     {
-        var onRenderProfileFragment = function(keepable)
+        // draw profile fragment button on load
+        app.renderKeepable("profile.fragment", function(keepable)
         {
             var profile = document.createElement('div');
             profile.classList.add("profile");
@@ -41,14 +43,9 @@ function()
 
             var profileNode = keepable.appendChild(profile);
             profileNode.appendChild(profileLogout);
-        };
 
-        // draw profile fragment button on load
-        window.addEventListener('load', function()
-        {
-            app.renderKeepable("profile.fragment", onRenderProfileFragment);
+            console.log("[profile-fragment] rendered");
         });
-
     })(window.app, document);
 
 });

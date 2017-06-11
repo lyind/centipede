@@ -74,47 +74,12 @@ function()
             {
                 var onDereference = onDereference;
                 var observer = this;
-                var supplier = undefined;
+                var _supplier = undefined;
                 var subscription = undefined;
                 var cache = new Rx.ReplaySubject(1);
 
-                // output observable with added method request()
-                var observable = cache.asObservable().finally(destructor).publishReplay(1).refCount();
-                observable.pull = function()
-                {
-                    // un-subscribe from previous source
-                    if (subscription)
-                    {
-                        subscription.unsubscribe();
-                    }
-
-                    var newValue = supplier();
-                    subscription = newValue.subscribe(observer);
-                    if (newValue.pull)
-                    {
-                        // allow broker subjects to connect to broker subjects
-                        newValue.pull();
-                    }
-                };
-
-                // implement Observer methods: closed(), next(), error() and complete()
-                closed = function() { return false; };
-
-                next = function(value) { cache.next(value); };
-
-                error = function(e)
-                {
-                    console.log("channel encountered error");
-                    cache.error(e);
-                };
-
-                complete = function()
-                {
-                    // ignore, we never complete
-                };
-
                 // destructor (called after the last subscriber disconnected)
-                destructor = function()
+                var destructor = function()
                 {
                     console.log("destroying value");
 
@@ -128,6 +93,62 @@ function()
                         onDereference();
                     }
                 };
+
+                // output observable with added method request()
+                var observable = cache.asObservable().finally(destructor).publishReplay(1).refCount();
+
+                var channel = {};  // the observer
+                Object.defineProperty(channel, "supplier", {
+                    set: function(newSupplier)
+                    {
+                        if ((typeof newSupplier) === 'function')
+                        {
+                            _supplier = newSupplier;
+                        }
+                        else
+                        {
+                            console.warn("[broker] ignored supplier that is not a function: ", newSupplier);
+                            console.trace();
+                        }
+                    },
+                    get: function()
+                    {
+                        return _supplier;
+                    }
+                });
+
+                Object.defineProperty(channel, "next", { value: function(value) { cache.next(value); }});
+
+                Object.defineProperty(channel, "error", { value: function(e)
+                {
+                    console.log("channel encountered error");
+                    cache.error(e);
+                }});
+
+                Object.defineProperty(channel, "complete", { value: function()
+                {
+                    // ignore, we never complete
+                }});
+
+                Object.defineProperty(channel, "pull", { value: function()
+                {
+                    // un-subscribe from previous source
+                    if (subscription)
+                    {
+                        subscription.unsubscribe();
+                    }
+
+                    var newValue = _supplier();
+                    subscription = newValue.subscribe(observer);
+                    if (newValue.pull)
+                    {
+                        // allow broker subjects to connect to broker subjects
+                        newValue.pull();
+                    }
+                }});
+
+                return channel;
+
             }(onDereference);
         };
 

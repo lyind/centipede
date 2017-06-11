@@ -25,11 +25,12 @@ function()
 {
     console.log("[ui] init");
 
-    (function(app, document, Rx)
+    (function(app, document, Rx, broker)
     {
         var html5doctype = document.implementation.createDocumentType( 'html', '', '');
         var keepStore = document.implementation.createDocument('', 'html', html5doctype);
         var encounteredScriptUrls = {};
+
 
         var placeKeepAnnotated = function(sourceDocument, targetDocument)
         {
@@ -57,9 +58,9 @@ function()
                     var template = targetDocument.getElementById(id);
                     if (template)
                     {
-                        // replace template with the "data-keep" annotated thing
+                        // replace template with the "keep" annotated thing
                         var node = targetDocument.importNode(sourceNode, true);
-                        template.parent.replaceChild(node, template);
+                        template.parentNode.replaceChild(node, template);
                         sourceNodeParent.removeChild(sourceNode);
                     }
                     else
@@ -75,10 +76,26 @@ function()
                         keepStore.documentElement.appendChild(node);
                         sourceNodeParent.removeChild(sourceNode);
                     }
+
+                    console.log("[ui] keepable restored: " + id);
                 }
                 else
                 {
                     console.error("[ui] element with attr. data-keep but no id: ", sourceNode.nodeName);
+                }
+            }
+
+            var newKeepables = targetDocument.querySelectorAll("[data-keep]");
+            for (var i = 0; i < newKeepables.length; ++i)
+            {
+                var keepableNode = newKeepables[i];
+                var src = keepableNode.getAttribute("data-keep");
+                if (src)
+                {
+                    app.schedule(function()
+                    {
+                        app.require(src, function() { keepableNode.setAttribute("data-keep", ""); });
+                    });
                 }
             }
         };
@@ -88,49 +105,101 @@ function()
         // and call onRender passing the element to fill as first argument
         var renderKeepable = function(id, onRender)
         {
-            var keepableElement = document.getElementById(id)
-            if (keepableElement)
+            app.schedule(function(app, root)
             {
-                if (!keepableElement.classList.contains("keep"))
+                var keepableElement = document.getElementById(id)
+                if (keepableElement)
                 {
-                    onRender(keepableElement);
-                    keepableElement.classList.add("keep");
+                    if (keepableElement.getAttribute("data-keep") != null)
+                    {
+                        onRender(keepableElement);
+                        keepableElement.setAttribute("data-keep", "");  // avoid re-render
+                        console.log("[ui] keepable rendered: " + id);
+                    }
+                }
+            });
+        };
+
+
+        var sliceAtIndexOf = function(subject, separator)
+        {
+            var i = subject.indexOf(separator);
+            if (i >= 0)
+            {
+                return [subject.slice(0, i), subject.slice(i)];
+            }
+            return [subject, ""];
+        };
+
+
+        var splitPath = function(pathHashAndQuery)
+        {
+            var url = { path: "", hash: "", query: ""};
+            var parts = [pathHashAndQuery, ""];
+
+            parts = sliceAtIndexOf(parts[0], '?');
+            url.query = parts[1];
+
+            parts = sliceAtIndexOf(parts[0], '#');
+            url.hash = parts[1];
+            url.path = parts[0];
+
+            return url;
+        };
+
+
+        var splitRoute = function(canonicalPathWithArgs)
+        {
+            var routeDict = { routes: [], strippedPath: "" };
+
+            var path = [];
+            var args = [];
+            var segments = canonicalPathWithArgs.split("/");
+            for (var i = 0; i < segments.length; ++i)
+            {
+                var s = segments[i];
+                if (s.startsWith(":"))
+                {
+                    args.push(s.slice(1));
+                }
+                else
+                {
+                    path.push(s);
+                    routeDict.routes.push({ "path": path.join("/"), "args": args});
+                    args = [];
                 }
             }
+
+            routeDict.strippedPath = path.join("/");
+
+            return routeDict;
         };
 
 
-        var extractQuery = function(pathAndQuery)
+        var navigateOnPopState = function(e)
         {
-            var iQueryStart = pathAndQuery.indexOf('?');
-            if (iQueryStart >= 0)
-            {
-                return pathAndQuery.slice(iQueryStart);
-            }
-            return "";
+            // navigate to the "current" page
+            var loc = window.location;
+            app.navigate(loc.pathname + loc.hash + loc.search);
         };
 
-
-        var stripQuery = function(pathAndQuery)
-        {
-            var iQueryStart = pathAndQuery.indexOf('?');
-            if (iQueryStart >= 0)
-            {
-                return pathAndQuery.slice(0, iQueryStart);
-            }
-            return pathAndQuery;
-        };
-
-        // TODO implement strip args
 
         var navigate = function(relativePath)
         {
-            var query = extractQuery(relativePath);
+            var parts = splitPath(relativePath);
+            var canonicalPathWithArgs = app.canonicalizePath(parts.path);
+            var routeDict = splitRoute(canonicalPathWithArgs);
 
-            // TODO strip query, then strip args
+            // publish argument updates for all parent routes and this route
+            for (var i = 0; i < routeDict.routes; ++i)
+            {
+                app.broker(["route", routeDict.routes[i].path], function() { return Rx.Observable.of(routeDict.routes[i].args); }).pull();
+            }
 
-            var canonicalPath = app.canonicalizePath(stripQuery(relativePath));
-            //var canoncialPathNoArgs = stripArgs(canoncialPath);
+            var canonicalPath = routeDict.strippedPath;
+
+            // notify subscribers about changed route
+            app.broker("route", function() { return Rx.Observable.of(canonicalPath); }).pull();
 
             // copied from
             var currentDocument = document;
@@ -139,6 +208,8 @@ function()
             {
                 try
                 {
+                    app.resetReadyState();
+
                     // place persistent elements with "keep=PARENT_ID" attribute
                     placeKeepAnnotated(currentDocument, newDocument);
 
@@ -207,23 +278,28 @@ function()
                 }
 
                 // change path to reflect actual location
-                var title = currentDocument.getElementsByTagName("TITLE");
-                if (title.length > 0)
+                var title = undefined;
+                var titleNode = currentDocument.getElementsByTagName("TITLE");
+                if (titleNode.length > 0 && titleNode[0].childNodes.length > 0)
                 {
-                    title = title.value;
+                    title = titleNode[0].childNodes[0].nodeValue;
                 };
 
-                window.history.pushState({"url": canonicalPath}, title, canonicalPath + query);
+                var targetPath = canonicalPathWithArgs + parts.hash + parts.query;
+                window.history.pushState(undefined, title, targetPath);
 
-                // call on load handlers
-                window.dispatchEvent(new Event("load"));
+                window.addEventListener("popstate", navigateOnPopState);
+
+                app.requireAllLoaded(function() { window.dispatchEvent(new Event("load")); });
+
+                console.log("[ui] navigated to: " + targetPath + ", title: " + title);
             },
             function(e)
             {
-                console.error("[ui] failed to request and switch to: " + canonicalPath + ": ", e);
+                console.error("[ui] failed to navigate to: " + canonicalPath + ": ", e);
             });
 
-            console.log("[ui] switchDocument scheduled");
+            console.log("[ui] navigate scheduled");
         };
 
         // publish methods
@@ -231,6 +307,6 @@ function()
         Object.defineProperty(app, "renderKeepable", { value: renderKeepable });
 
 
-    })(window.app, document, window.Rx);
+    })(window.app, document, window.Rx, window.app.broker);
 
 });

@@ -24,16 +24,25 @@
     // start by loading external libraries and then our application
     if (!window.app)
     {
-        var appRoot = (function()
-        {
-          var root = document.scripts[document.scripts.length - 1].src;
-          return root.replace(/core\/app\.js$/, "");
-        })();
+        // publish app object
+        Object.defineProperty(window, "app", { value: {} });
+        var app = window.app;
 
+        // set app root URL to the parent of this scripts directory
+        Object.defineProperty(app, "root", { value:
+            (function()
+            {
+              var src = document.currentScript.src;
+              return new URL(src.slice(0, src.lastIndexOf("/", src.lastIndexOf("/") - 1) + 1));
+            })()
+        });
+
+        // internally used variables
         var requireStore = {};
         var requireStack = [];
         var scheduled = [];
-        var isMounted = false;
+        var readyState = 0; // 0 - neither app loaded nor window.onload called, 1 - app loaded or window.onload, 2 - both
+
 
         var loadViaTag = function(url)
         {
@@ -58,13 +67,6 @@
         };
 
 
-        var getBasePath = function()
-        {
-            //return document.location.pathname;
-            return appRoot;
-        }
-
-
         var canonicalizePath = function(relativePath)
         {
             var relativeSegments = relativePath.split("/");
@@ -73,7 +75,12 @@
             var basePath = "";
             if (relativeSegments.length <= 0 || relativeSegments[0] !== "")
             {
-                basePath = getBasePath();
+                basePath = app.root.pathname;
+            }
+            else
+            {
+                // absolute path specified, cut away first empty string
+                relativeSegments.shift();
             }
 
             var segments = basePath.split("/");
@@ -85,11 +92,16 @@
             for (var i = 0; i < relativeSegments.length; ++i)
             {
                 var segment = relativeSegments[i];
-                if (segment !== ".")
+                if (segment !== "" && segment !== ".")
                 {
                     if (segment === "..")
                     {
-                        segments.pop();
+                        // special handling of positional arguments (start with ":"): pop all
+                        do
+                        {
+                            segments.pop();
+                        }
+                        while(segments.length > 0 && segments[segments.length - 1].startsWith(":"));
                     }
                     else
                     {
@@ -112,6 +124,9 @@
         // Load scripts at the specified paths and execute callback after all have been loaded.
         var require = function(paths, onComplete)
         {
+            if (!paths)
+                return;
+
             paths = (paths.constructor === Array) ? paths : [paths];
 
             var request = { done: false, "onComplete": onComplete };
@@ -192,19 +207,27 @@
         };
 
 
-        // find the parent of the last loaded <script> tag
-        var findComponent = function()
+        // call onComplete as soon as require did load all currently queued scripts
+        var requireAllLoaded = function(onComplete)
         {
-            if (document.scripts.length > 0)
+            var allScripts = [];
+            for (var path in requireStore)
             {
-                var scriptTag = document.scripts[document.scripts.length - 1];
-                if (scriptTag)
+                if (Object.prototype.hasOwnProperty.call(requireStore, path))
                 {
-                    return scriptTag.parentNode;
+                    allScripts.push(path);
                 }
             }
 
-            return undefined;
+            require(allScripts, onComplete);
+        };
+
+
+        // find the parent of the last loaded <script> tag
+        var findComponent = function()
+        {
+            var script = document.currentScript;
+            return (script) ? script.parentNode : undefined;
         };
 
 
@@ -220,7 +243,7 @@
                 task = function(app) { fn(app, root); };
             }
 
-            if (!isMounted)
+            if (readyState < 2)
             {
                 scheduled.push(task);
             }
@@ -231,13 +254,26 @@
         };
 
 
-        // run scheduled functions
-        var runScheduled = function()
+        // run scheduled functions on the second call
+        var considerRunningScheduled = function()
         {
-            var job = undefined;
-            while((job = scheduled.shift()) != null)
+            ++readyState;
+            if (readyState >= 2)
             {
-                job(this);
+                var job = undefined;
+                while((job = scheduled.shift()) != null)
+                {
+                    job(this);
+                }
+            }
+        };
+
+
+        var resetReadyState = function()
+        {
+            if (readyState > 1)
+            {
+                readyState = 1;
             }
         };
 
@@ -245,29 +281,24 @@
         // redirect to actual component, if not at root
         var doRedirect = function()
         {
-            var path = window.location.pathname;
-            if (path !== "/" && path !== "/index.html")
-            {
-                window.app.navigate(window.location.pathname + window.location.hash + window.location.search);
-            }
+            // ensure initial navigation (user entering application/coming back using deep link)
+            var loc = window.location;
+            app.navigate(loc.pathname + loc.hash + loc.search);
+
+            considerRunningScheduled();
         };
 
 
         // load application parts
         var bootstrapApp = function()
         {
-            var app = {};
-
             // publish app API methods
-            Object.defineProperty(app, "getBasePath", { value: getBasePath });
             Object.defineProperty(app, "canonicalizePath", { value: canonicalizePath });
             Object.defineProperty(app, "require", { value: require });
+            Object.defineProperty(app, "requireAllLoaded", { value: requireAllLoaded });
+            Object.defineProperty(app, "resetReadyState", { value: resetReadyState });
             Object.defineProperty(app, "schedule", { value: schedule });
-            Object.defineProperty(app, "runScheduled", { value: runScheduled });
             Object.defineProperty(app, "isObject", { value: isObject });
-
-            // publish app root object
-            Object.defineProperty(window, "app", { value: app });
 
             // load core components
             require([
@@ -281,15 +312,13 @@
             {
                 console.log("mounting app");
 
-                app.runScheduled();
-                isMounted = true;
-
-                console.log("app mounted at: " + getBasePath());
+                console.log("app mounted at: " + app.root.pathname);
 
                 doRedirect();
             });
         };
 
+        window.addEventListener("load", considerRunningScheduled);
         bootstrapApp();
     }
 
