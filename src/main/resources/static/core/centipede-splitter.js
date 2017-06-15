@@ -29,6 +29,7 @@ function()
     {
         const SERVICES = "services";
         const TOKEN = "token";
+        const CREDENTIALS = "credentials";
         const ERROR = "error";
         const OVERFLOW = "overflow";
 
@@ -40,7 +41,11 @@ function()
             }
             if (message.token != null)
             {
-                broker(TOKEN, function() { return Rx.Observable.of(message.services); });
+                broker(TOKEN, function() { return Rx.Observable.of(message.token); });
+            }
+            if (message.credentials != null)
+            {
+                broker(CREDENTIALS, function() { return Rx.Observable.of(message.credentials); });
             }
             if (message.error != null)
             {
@@ -53,20 +58,13 @@ function()
         };
 
         // publish constant subject IDs
-        if (!app.subjects)
-        {
-            Object.defineProperty(app, "subjects", { value: {} });
-        }
         Object.defineProperty(app.subjects, SERVICES, { value: SERVICES });
         Object.defineProperty(app.subjects, TOKEN, { value: TOKEN });
+        Object.defineProperty(app.subjects, CREDENTIALS, { value: CREDENTIALS });
         Object.defineProperty(app.subjects, ERROR, { value: ERROR });
         Object.defineProperty(app.subjects, OVERFLOW, { value: OVERFLOW });
 
         // publish splitter
-        if (!app.splitters)
-        {
-            Object.defineProperty(app, "splitters", { value: [] });
-        }
         app.splitters.push(splitter);
 
     })(window.app, window.app.broker, window.Rx);

@@ -30,7 +30,7 @@ function()
         {
             return Rx.Observable.create(function (observer)
             {
-                console.log("[http] GET: " + url);
+                console.log("[http] GET: \"" + url + "\"");
                 var request = new XMLHttpRequest();
 
                 request.open(method, url, true);

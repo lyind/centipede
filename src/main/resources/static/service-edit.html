@@ -1,24 +1,20 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8"/>
-    <title>Centipede - Edit Service</title>
-    <script src="/core/app.js"></script>
-</head>
-<body>
-<h1>Hello</h1>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="lib/spectre.css">
+<title>Centipede - Edit Service</title>
+<script src="/core/app.js"></script>
+<div id="profile" data-keep="fragment/profile.fragment.html"></div>
 <div>
-    <div id="profile.fragment" data-keep="profile.fragment.js"></div>
     <p>Ready (would show service details here)</p>
     <br />
-    <a class="back-link" href="..">Back</a>
+    <a id="serviceEditBack" href="..">Back</a>
     <script>
     console.log("[service-edit] init");
-    app.schedule(function(app, root)
+    app.schedule(function(app, locals)
     {
         console.log("[service-edit] ready");
 
-        Rx.Observable.fromEvent(root.querySelectorAll(".back-link"), 'click').subscribe(function(e)
+        Rx.Observable.fromEvent(locals.serviceEditBack, 'click').subscribe(function(e)
         {
             console.log("[service-edit] back link: click: " + e.target.getAttribute('href'));
             window.app.navigate(e.target.getAttribute('href'));
@@ -29,5 +25,3 @@
     });
     </script>
 </div>
-</body>
-</html>

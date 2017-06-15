@@ -19,6 +19,7 @@
 // UI helper
 app.require([
     "lib/Rx.js",
+    "core/broker.js",
     "core/http.js"
 ],
 function()
@@ -27,9 +28,61 @@ function()
 
     (function(app, document, Rx, broker)
     {
+        const ROUTE = "route";
+
         var html5doctype = document.implementation.createDocumentType( 'html', '', '');
         var keepStore = document.implementation.createDocument('', 'html', html5doctype);
         var encounteredScriptUrls = {};
+
+
+        // request a full DOM document
+        var getDocument = function(canonicalPath)
+        {
+            return app.GET(canonicalPath, "document", {});
+        };
+
+
+        // request a DOM document and return it's body as a document fragment of the current document
+        var getFragment = function(targetDocument, canonicalPath)
+        {
+            return getDocument(canonicalPath).map(function(doc)
+            {
+                var fragment = targetDocument.createDocumentFragment();
+                var children = doc.body.childNodes;
+                var length = children.length;
+                for (var i = 0; i < length; ++i)
+                {
+                    var fragmentNode = targetDocument.importNode(children[i], true);
+                    fragment.appendChild(fragmentNode);
+                }
+
+                return fragment;
+            });
+        };
+
+
+        var forceScriptExecution = function(targetDocument, scriptNodes)
+        {
+            var length = scriptNodes.length;
+            for (var i = 0; i < length; ++i)
+            {
+                var script = scriptNodes[i];
+                var parent = script.parentNode;
+
+                var newScript = targetDocument.createElement("script");
+
+                // copy attributes
+                for (var j = 0; j < script.attributes.length; ++j)
+                {
+                    var attribute = script.attributes[j];
+                    newScript.setAttribute(attribute.name, attribute.value);
+                }
+
+                newScript.appendChild(targetDocument.createTextNode(script.innerHTML));
+
+                parent.replaceChild(newScript, script);
+            }
+        };
 
 
         var placeKeepAnnotated = function(sourceDocument, targetDocument)
@@ -94,30 +147,25 @@ function()
                 {
                     app.schedule(function()
                     {
-                        app.require(src, function() { keepableNode.setAttribute("data-keep", ""); });
+                        if (src.endsWith(".js"))
+                        {
+                            // script only fragment requested
+                            app.require(src, function() { keepableNode.setAttribute("data-keep", ""); });
+                        }
+                        else
+                        {
+                            // HTML fragment requested
+                            getFragment(targetDocument, app.canonicalizePath(src)).subscribe(function(fragment)
+                            {
+                                keepableNode.appendChild(fragment);
+                                forceScriptExecution(targetDocument, Array.prototype.map.call(keepableNode.getElementsByTagName("script"), function(node) { return node; }));
+
+                                keepableNode.setAttribute("data-keep", "");  // flag as rendered
+                            })
+                        }
                     });
                 }
             }
-        };
-
-
-        // lookup the template element with "id", check if it has not been rendered before
-        // and call onRender passing the element to fill as first argument
-        var renderKeepable = function(id, onRender)
-        {
-            app.schedule(function(app, root)
-            {
-                var keepableElement = document.getElementById(id)
-                if (keepableElement)
-                {
-                    if (keepableElement.getAttribute("data-keep") != null)
-                    {
-                        onRender(keepableElement);
-                        keepableElement.setAttribute("data-keep", "");  // avoid re-render
-                        console.log("[ui] keepable rendered: " + id);
-                    }
-                }
-            });
         };
 
 
@@ -193,18 +241,18 @@ function()
             // publish argument updates for all parent routes and this route
             for (var i = 0; i < routeDict.routes; ++i)
             {
-                app.broker(["route", routeDict.routes[i].path], function() { return Rx.Observable.of(routeDict.routes[i].args); }).pull();
+                app.broker([ROUTE, routeDict.routes[i].path], function() { return Rx.Observable.of(routeDict.routes[i].args); }).pull();
             }
 
             var canonicalPath = routeDict.strippedPath;
 
             // notify subscribers about changed route
-            app.broker("route", function() { return Rx.Observable.of(canonicalPath); }).pull();
+            app.broker(ROUTE, function() { return Rx.Observable.of(canonicalPath); }).pull();
 
-            // copied from
+            // copy reference to avoid some firefox bug
             var currentDocument = document;
 
-            this.GET(canonicalPath, "document", {}).subscribe(function(newDocument)
+            getDocument(canonicalPath).subscribe(function(newDocument)
             {
                 try
                 {
@@ -234,47 +282,28 @@ function()
                     }
 
                     // enforce script execution
-                    var liveScripts = currentDocument.getElementsByTagName("SCRIPT");
-                    var scripts = [];
-                    var basePath = window.location;
-                    for (var i = 0; i < liveScripts.length; ++i)
+                    forceScriptExecution(currentDocument, Array.prototype.filter.call(currentDocument.getElementsByTagName("script"), function(script)
                     {
-                        var script = liveScripts[i];
                         if (script.parentNode.nodeName === "HEAD")
                         {
                             if (Object.prototype.hasOwnProperty.call(encounteredScriptUrls, script.src))
                             {
                                 console.log("[ui] skip: ", script.src);
-                                continue;  // skip this script
+                                // skip this script
+                                return false;
                             }
                         }
-                        scripts.push(script);
-                    }
-
-                    for (var i = 0; i < scripts.length; ++i)
-                    {
-                        var script = scripts[i];
-                        var parent = script.parentNode;
-
-                        var newScript = currentDocument.createElement("script");
-
-                        // copy attributes
-                        for (var j = 0; j < script.attributes.length; ++j)
-                        {
-                            var attribute = script.attributes[j];
-                            newScript.setAttribute(attribute.name, attribute.value);
-                        }
-
-                        newScript.appendChild(currentDocument.createTextNode(script.innerHTML));
-
-                        parent.replaceChild(newScript, script);
-                    }
+                        return true;
+                    }));
                 }
                 catch (e)
                 {
+                    console.error("[ui] failed to construct target document: " + canonicalPath + ": ", e);
+                /*
                     currentDocument = currentDocument.open("text/html");
                     currentDocument.write(newDocument.documentElement.outerHTML);
                     currentDocument.close();
+                */
                 }
 
                 // change path to reflect actual location
@@ -304,7 +333,8 @@ function()
 
         // publish methods
         Object.defineProperty(app, "navigate", { value: navigate });
-        Object.defineProperty(app, "renderKeepable", { value: renderKeepable });
+
+        Object.defineProperty(app.subjects, ROUTE, { value: ROUTE });
 
 
     })(window.app, document, window.Rx, window.app.broker);

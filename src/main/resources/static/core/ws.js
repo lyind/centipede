@@ -27,16 +27,16 @@ function()
 
     (function(app, Rx, broker)
     {
+        const WEBSOCKET_OPEN = "WEBSOCKET_OPEN";
+        const WEBSOCKET_CLOSE = "WEBSOCKET_CLOSE";
+        const WEBSOCKET_ERROR = "WEBSOCKET_ERROR";
+
         var ws = {};
 
         // reference to the current connection
-        ws.socket = undefined;
+        Object.defineProperty(ws, "socket", { writable: true});
+        Object.defineProperty(ws, "id", { value: 0, writable: true});
 
-        ws.openId = "ws-open";
-        ws.closeId = "ws-close";
-        ws.errorId = "ws-error";
-
-        ws.id = 0;
 
         // open WebSocket connection
         ws.open = function(url)
@@ -48,7 +48,7 @@ function()
             ws.socket.onopen = function(event)
             {
                 console.log("websocket[" + ws.id + "]: opened");
-                broker(ws.openId, function() { return Rx.Observable.of(ws.id); });
+                broker(WEBSOCKET_OPEN, function() { return Rx.Observable.of(ws.id); });
             };
 
             ws.socket.onclose = function(event)
@@ -56,7 +56,7 @@ function()
                 if (event.wasClean)
                 {
                     console.log("websocket[" + ws.id + "]: closed");
-                    broker(ws.closeId, function() { return Rx.Observable.of(ws.id); });
+                    broker(WEBSOCKET_CLOSE, function() { return Rx.Observable.of(ws.id); });
                 }
             };
 
@@ -73,7 +73,7 @@ function()
             {
                 console.log("websocket[" + ws.id + "]: error, trying to re-connect");
 
-                broker(ws.errorId, function() { return Rx.Observable.of(ws.id); });
+                broker(WEBSOCKET_ERROR, function() { return Rx.Observable.of(ws.id); });
 
                 setTimeout(500, function() { ws.open(url); });
             };
@@ -91,6 +91,11 @@ function()
 
         // publish
         Object.defineProperty(app, "ws", { value: ws });
+
+        // status subjects
+        Object.defineProperty(app.subjects, WEBSOCKET_OPEN, { value: WEBSOCKET_OPEN});
+        Object.defineProperty(app.subjects, WEBSOCKET_CLOSE, { value: WEBSOCKET_CLOSE});
+        Object.defineProperty(app.subjects, WEBSOCKET_ERROR, { value: WEBSOCKET_ERROR});
 
     })(window.app, window.Rx, window.app.broker);
 });

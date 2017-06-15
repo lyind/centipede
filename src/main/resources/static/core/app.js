@@ -129,7 +129,8 @@
 
             paths = (paths.constructor === Array) ? paths : [paths];
 
-            var request = { done: false, "onComplete": onComplete };
+            var requester = (document.currentScript) ? new URL(document.currentScript.src) : "<anonymous>";
+            var request = { done: false, "onComplete": onComplete, "requester": requester };
             var pathsToLoad = paths.map(canonicalizePath);
 
             var considerComplete = function(loadedPath)
@@ -177,7 +178,22 @@
                 return;
             }
 
+            // push new request on stack and make sure callbacks of all scripts required by this request get called first
             requireStack.push(request);
+            var stackLength = requireStack.length;
+            for (var i = stackLength - 2; i >= 0; --i)
+            {
+                var frame = requireStack[i];
+                if (pathsToLoad.indexOf(frame.requester.pathname) >= 0)
+                {
+                    // put this frame on top of the stack, shift all higher frames down
+                    for (var j = i + 1; j < stackLength; ++j)
+                    {
+                        requireStack[j - 1] = requireStack[j];
+                    }
+                    requireStack[j - 1] = frame;
+                }
+            }
 
             pathsToLoad.forEach(function(path)
             {
@@ -224,10 +240,22 @@
 
 
         // find the parent of the last loaded <script> tag
-        var findComponent = function()
+        var findLocalElements = function()
         {
             var script = document.currentScript;
-            return (script) ? script.parentNode : undefined;
+
+            // bind all IDs
+            var locals = {};
+            Object.defineProperty(locals, "root", { value: (script && script.parentNode) ? script.parentNode : undefined});
+            if (locals.root)
+            {
+                Array.prototype.forEach.call(locals.root.querySelectorAll('*[id]:not([id=""])'), function(e)
+                {
+                    Object.defineProperty(locals, e.id, { value: e });
+                });
+            }
+
+            return locals;
         };
 
 
@@ -236,11 +264,11 @@
         // the DOM element that is parent to the calling <script> element will be passed as second argument
         var schedule = function(fn)
         {
-            var root = findComponent();
+            var locals = findLocalElements();
             var task = fn;
-            if (root !== undefined)
+            if (locals.root !== undefined)
             {
-                task = function(app) { fn(app, root); };
+                task = function(app) { fn(app, locals); };
             }
 
             if (readyState < 2)
@@ -249,7 +277,7 @@
             }
             else
             {
-                task();
+                task(app);
             }
         };
 
@@ -263,7 +291,7 @@
                 var job = undefined;
                 while((job = scheduled.shift()) != null)
                 {
-                    job(this);
+                    job(app);
                 }
             }
         };
@@ -313,6 +341,8 @@
                 console.log("mounting app");
 
                 console.log("app mounted at: " + app.root.pathname);
+
+                app.ws.open(app.root.href.replace("http", "ws"));
 
                 doRedirect();
             });

@@ -51,7 +51,7 @@ function()
                 channel.supplier = supplier;
             }
 
-            return channel;
+            return channel.observable;
         };
 
 
@@ -94,10 +94,31 @@ function()
                     }
                 };
 
-                // output observable with added method request()
-                var observable = cache.asObservable().finally(destructor).publishReplay(1).refCount();
-
                 var channel = {};  // the observer
+
+                // output observable with added method pull()
+                var observable = cache.asObservable().finally(destructor).publishReplay(1).refCount();
+                Object.defineProperty(observable, "pull", { value: function()
+                {
+                    // un-subscribe from previous source
+                    if (subscription)
+                    {
+                        subscription.unsubscribe();
+                    }
+
+                    var newValue = (_supplier) ? _supplier() : Rx.Observable.of(undefined);
+                    subscription = newValue.subscribe(observer);
+                    if (newValue.pull)
+                    {
+                        // allow broker subjects to connect to broker subjects
+                        newValue.pull();
+                    }
+
+                    return observable;
+                }});
+
+                Object.defineProperty(channel, "observable", { get: function() { return observable; } });
+
                 Object.defineProperty(channel, "supplier", {
                     set: function(newSupplier)
                     {
@@ -130,23 +151,6 @@ function()
                     // ignore, we never complete
                 }});
 
-                Object.defineProperty(channel, "pull", { value: function()
-                {
-                    // un-subscribe from previous source
-                    if (subscription)
-                    {
-                        subscription.unsubscribe();
-                    }
-
-                    var newValue = _supplier();
-                    subscription = newValue.subscribe(observer);
-                    if (newValue.pull)
-                    {
-                        // allow broker subjects to connect to broker subjects
-                        newValue.pull();
-                    }
-                }});
-
                 return channel;
 
             }(onDereference);
@@ -154,6 +158,12 @@ function()
 
         // publish
         Object.defineProperty(app, "broker", { value: broker });
+
+        // broker subject id constants
+        Object.defineProperty(app, "subjects", { value: {} });
+
+        // sub-protocol splitter registry
+        Object.defineProperty(app, "splitters", { value: [] });
 
     })(window.app, window.Rx);
 });

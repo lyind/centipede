@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<div class="popover popover-bottom" style="position: fixed; top: 1rem; right: 1rem;">
+    <button class="btn btn-lg btn-action circle" style="height: 9rem; width: 9rem;"><img src="../pic/admin-user.svg"></button>
+    <div class="popover-container card" id="profileFrame">
+        <form id="profileForm" hidden="true">
+            <label class="form-label" for="profileFormName">Username</label>
+            <div class="form-group">
+                <span class="input-group-addon">
+                    <img src="../pic/admin-user.svg" style="height: 1ex; width: 1ex;">
+                </span>
+                <input id="profileFormName" tabIndex="1" type="text" class="form-input" placeholder="Username" name="name" required>
+            </div>
+            <label class="form-label" for="profileFormPassword">Password</label>
+            <div class="form-group">
+                <span class="input-group-addon">
+                    <img src="../pic/key.svg" style="height: 1ex; width: 1ex;">
+                </span>
+                <input id="profileFormPassword" tabIndex="2" type="password" class="form-input" placeholder="Password" name="password" required>
+            </div>
+            <button id="profileSignin" type="submit" class="btn btn-primary">Signin</button>
+            <script>
+            app.schedule(function(app, locals)
+            {
+                // handle credential input
+                Rx.Observable.fromEvent(locals.root, "submit")
+                    .map(function(e)
+                    {
+                        var name = locals.profileFormName.value;
+                        var password = locals.profileFormPassword.value;
+
+                        return { "credentials": { "name": name, "password": password } };
+                    })
+                    .subscribe(app.ws.send);
+
+                // handle token values
+                app.broker(app.subjects.TOKEN).subscribe(function(token)
+                {
+                    locals.root.setAttribute("hidden", (!token));
+                });
+            });
+            </script>
+        </form>
+        <div id="profileInfo" hidden="true">
+            <span id="profileName"></span>
+            <button id="profileSignout" class="btn btn-primary">Logout</button>
+            <script>
+            app.schedule(function(app, locals)
+            {
+                // handle click
+                Rx.Observable.fromEvent(locals.profileSignout, "click")
+                    .map(function(e)
+                    {
+                        return { "credentials": {} };
+                    })
+                    .subscribe(app.ws.send);
+
+                // handle token values
+                app.broker(app.subjects.TOKEN).subscribe(function(token)
+                {
+                    locals.root.setAttribute("hidden", (!!token));
+                });
+
+                // handle login name changes
+                app.broker(app.subjects.CREDENTIALS).subscribe(function(credentials)
+                {
+                    locals.profileName.textContent = (credentials && credentials.name) ? credentials.name : "";
+                });
+            });
+            </script>
+        </div>
+        <script>
+        console.log("[profile.fragment] init");
+        app.schedule(function(app, locals)
+        {
+            console.log("[profile.fragment] scheduled");
+
+            app.broker(app.subjects.TOKEN).pull();
+        });
+        </script>
+    </div>
+</div>
