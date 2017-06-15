@@ -24,6 +24,7 @@ import lombok.Getter;
 import lombok.val;
 import net.talpidae.base.resource.AuthenticationRequestFilter;
 import net.talpidae.base.util.auth.Authenticator;
+import net.talpidae.base.util.auth.Credentials;
 import net.talpidae.base.util.session.Session;
 import net.talpidae.base.util.session.SessionService;
 import net.talpidae.centipede.bean.service.Api;
@@ -98,6 +99,7 @@ public class Security implements CallHandler
             {
                 // just return a fresh token (expiry postponed) for the active session
                 request.setToken(authenticator.createToken(session.getId()));
+                request.setCredentials(Credentials.builder().name("ADMIN").build());
                 return request;
             }
         }
