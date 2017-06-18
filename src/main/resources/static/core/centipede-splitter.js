@@ -27,11 +27,11 @@ function()
 
     (function(app, broker, Rx)
     {
-        const SERVICES = "services";
-        const TOKEN = "token";
-        const CREDENTIALS = "credentials";
-        const ERROR = "error";
-        const OVERFLOW = "overflow";
+        const SERVICES = "SERVICES";
+        const TOKEN = "TOKEN";
+        const CREDENTIALS = "CREDENTIALS";
+        const ERROR = "ERROR";
+        const OVERFLOW = "OVERFLOW";
 
         var splitter = function(broker, message)
         {

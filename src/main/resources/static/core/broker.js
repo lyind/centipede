@@ -37,7 +37,7 @@ function()
             var channel = store[subject];
             if (!channel)
             {
-                channel = createChannel(function()
+                channel = createChannel(subject, function()
                 {
                     // un-register from store after last subscriber disconnected
                     delete store[subject];
@@ -68,7 +68,7 @@ function()
 
 
         // create a channel (an observer that never completes and has a ReplaySubject attached to it)
-        var createChannel = function(onDereference)
+        var createChannel = function(subject, onDereference)
         {
             return function(onDereference)
             {
@@ -81,7 +81,7 @@ function()
                 // destructor (called after the last subscriber disconnected)
                 var destructor = function()
                 {
-                    console.log("destroying value");
+                    console.log("[broker] destroying: " + subject);
 
                     if (subscription)
                     {
@@ -106,7 +106,7 @@ function()
                         subscription.unsubscribe();
                     }
 
-                    var newValue = (_supplier) ? _supplier() : Rx.Observable.of(undefined);
+                    var newValue = (_supplier) ? _supplier() : Rx.Observable.empty();
                     subscription = newValue.subscribe(channel);
                     if (newValue.pull)
                     {
@@ -128,7 +128,7 @@ function()
                         }
                         else
                         {
-                            console.warn("[broker] ignored supplier that is not a function: ", newSupplier);
+                            console.warn("[broker] ignored supplier for " + subject + " that is not a function: ", newSupplier);
                             console.trace();
                         }
                     },
@@ -142,7 +142,7 @@ function()
 
                 Object.defineProperty(channel, "error", { value: function(e)
                 {
-                    console.log("channel encountered error");
+                    console.log("[broker] encountered error for: " + subject);
                     cache.error(e);
                 }});
 

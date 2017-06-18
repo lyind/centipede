@@ -28,7 +28,8 @@ function()
 
     (function(app, document, Rx, broker)
     {
-        const ROUTE = "route";
+        const NEXT_ROUTE = "NEXT_ROUTE";
+        const ROUTE = "ROUTE";
 
         var html5doctype = document.implementation.createDocumentType( 'html', '', '');
         var keepStore = document.implementation.createDocument('', 'html', html5doctype);
@@ -198,7 +199,7 @@ function()
 
         var splitRoute = function(canonicalPathWithArgs)
         {
-            var routeDict = { routes: [], strippedPath: "" };
+            var route = { routes: [], strippedPath: "", subscription: undefined };
 
             var path = [];
             var args = [];
@@ -213,14 +214,14 @@ function()
                 else
                 {
                     path.push(s);
-                    routeDict.routes.push({ "path": path.join("/"), "args": args});
+                    route.routes.push({ "path": path.join("/"), "args": args});
                     args = [];
                 }
             }
 
-            routeDict.strippedPath = path.join("/");
+            route.strippedPath = path.join("/");
 
-            return routeDict;
+            return route;
         };
 
 
@@ -236,23 +237,11 @@ function()
         {
             var parts = splitPath(relativePath);
             var canonicalPathWithArgs = app.canonicalizePath(parts.path);
-            var routeDict = splitRoute(canonicalPathWithArgs);
-
-            // publish argument updates for all parent routes and this route
-            for (var i = 0; i < routeDict.routes; ++i)
-            {
-                app.broker([ROUTE, routeDict.routes[i].path], function() { return Rx.Observable.of(routeDict.routes[i].args); }).pull();
-            }
-
-            var canonicalPath = routeDict.strippedPath;
-
-            // notify subscribers about changed route
-            app.broker(ROUTE, function() { return Rx.Observable.of(canonicalPath); }).pull();
+            var route = splitRoute(canonicalPathWithArgs);
 
             // copy reference to avoid some firefox bug
             var currentDocument = document;
-
-            getDocument(canonicalPath).subscribe(function(newDocument)
+            var subscription = getDocument(route.strippedPath).subscribe(function(newDocument)
             {
                 try
                 {
@@ -267,6 +256,15 @@ function()
                     {
                         encounteredScriptUrls[livePreviousScripts[i].src] = null;
                     }
+
+                    // publish argument updates for all parent routes and this route
+                    for (var i = 0; i < route.routes; ++i)
+                    {
+                        app.broker([ROUTE, route.routes[i].path], function() { return Rx.Observable.of(route.routes[i].args); }).pull();
+                    }
+
+                    // notify subscribers about changed route
+                    app.broker(ROUTE, function() { return Rx.Observable.of(route); }).pull();
 
                     // perform document replace
                     currentDocument.replaceChild(newDocument.documentElement, currentDocument.documentElement);
@@ -298,7 +296,7 @@ function()
                 }
                 catch (e)
                 {
-                    console.error("[ui] failed to construct target document: " + canonicalPath + ": ", e);
+                    console.error("[ui] failed to construct target document: " + route.strippedPath + ": ", e);
                 /*
                     currentDocument = currentDocument.open("text/html");
                     currentDocument.write(newDocument.documentElement.outerHTML);
@@ -325,17 +323,20 @@ function()
             },
             function(e)
             {
-                console.error("[ui] failed to navigate to: " + canonicalPath + ": ", e);
+                console.error("[ui] failed to navigate to: " + route.strippedPath + ": ", e);
             });
+
+            // notify subscribers about next route (subscribers may cancel the routing attempt using "subscription"
+            route.subscription = subscription;
+            app.broker(NEXT_ROUTE, function() { return Rx.Observable.of(route); }).pull();
 
             console.log("[ui] navigate scheduled");
         };
 
-        // publish methods
+        // publish methods and constants
         Object.defineProperty(app, "navigate", { value: navigate });
-
         Object.defineProperty(app.subject, ROUTE, { value: ROUTE });
-
+        Object.defineProperty(app.subject, NEXT_ROUTE, { value: NEXT_ROUTE });
 
     })(window.app, document, window.Rx, window.app.broker);
 

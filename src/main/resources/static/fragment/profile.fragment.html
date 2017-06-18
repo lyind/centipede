@@ -71,11 +71,8 @@
         </div>
     </div>
     <script>
-        console.log("[profile.fragment] init");
         app.schedule(function(app, locals)
         {
-            console.log("[profile.fragment] scheduled");
-
             // handle token values
             app.broker(app.subject.TOKEN).subscribe(function(token)
             {
@@ -88,18 +85,20 @@
                 }
 
                 // update profile glyph
-                locals.profileGlyph.src = (token) ? "../pic/user.svg" : "../pic/admin-user.svg";
+                locals.profileGlyph.src = (token) ? "../pic/admin-user.svg" : "../pic/user.svg";
             });
 
             // on token changes, if token is empty, redirect to index if not already there
             app.broker(app.subject.TOKEN)
-                .filter(function(token) { console.log("[profile-fragment] checking token filter: ", token); return (!token); })
-                .flatMap(function(token) { console.log("[profile-fragment] checking token: ", token); return app.broker(app.subject.ROUTE); })
-                .filter(function(route) { console.log("[profile-fragment] at route: ", route); return route !== "" && route !== "/"; })
+                .filter(function(token) { return (!token); })
+                .flatMap(function(token) { return app.broker(app.subject.NEXT_ROUTE); })
+                .filter(function(route) { return route.strippedPath !== "" && route.strippedPath !== "/"; })
+                .take(1)
                 .subscribe(function(route)
                 {
-                    console.log("[profile-fragment] not authenticated: navigate to /");
-                    //app.navigate("");
+                    console.log("[profile-fragment] not authenticated: cancel routing attempt and navigate to: /");
+                    route.subscription.unsubscribe();
+                    app.navigate("/");
                 });
 
             // initialize TOKEN with stored token
