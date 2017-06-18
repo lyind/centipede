@@ -30,7 +30,7 @@ function()
 
         // get an observable for a specific subject
         // optionally set a new supplier function (must return an observable)
-        var broker = function(subject, supplier)
+        var broker = function(subject, supplier, onlyIfEmpty)
         {
             subject = normalizeSubject(subject);
 
@@ -46,7 +46,7 @@ function()
                 store[subject] = channel;
             }
 
-            if (supplier)
+            if (supplier && (!onlyIfEmpty || channel.supplier === undefined))
             {
                 channel.supplier = supplier;
             }
@@ -107,10 +107,10 @@ function()
                     }
 
                     var newValue = (_supplier) ? _supplier() : Rx.Observable.of(undefined);
-                    subscription = newValue.subscribe(observer);
+                    subscription = newValue.subscribe(channel);
                     if (newValue.pull)
                     {
-                        // allow broker subjects to connect to broker subjects
+                        // allow broker subject to connect to broker subject
                         newValue.pull();
                     }
 
@@ -160,7 +160,7 @@ function()
         Object.defineProperty(app, "broker", { value: broker });
 
         // broker subject id constants
-        Object.defineProperty(app, "subjects", { value: {} });
+        Object.defineProperty(app, "subject", { value: {} });
 
         // sub-protocol splitter registry
         Object.defineProperty(app, "splitters", { value: [] });

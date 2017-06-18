@@ -69,7 +69,7 @@
 
         var canonicalizePath = function(relativePath)
         {
-            var relativeSegments = relativePath.split("/");
+            var relativeSegments = relativePath.replace("//", "/").split("/");
 
             // handle absolute paths
             var basePath = "";
@@ -92,7 +92,7 @@
             for (var i = 0; i < relativeSegments.length; ++i)
             {
                 var segment = relativeSegments[i];
-                if (segment !== "" && segment !== ".")
+                if (segment !== ".")
                 {
                     if (segment === "..")
                     {
@@ -124,10 +124,7 @@
         // Load scripts at the specified paths and execute callback after all have been loaded.
         var require = function(paths, onComplete)
         {
-            if (!paths)
-                return;
-
-            paths = (paths.constructor === Array) ? paths : [paths];
+            paths = (paths.constructor === Array) ? paths : ((paths) ? [paths] : []);
 
             var requester = (document.currentScript) ? new URL(document.currentScript.src) : "<anonymous>";
             var request = { done: false, "onComplete": onComplete, "requester": requester };
@@ -334,7 +331,8 @@
                 "core/ui.js",
                 "core/centipede-splitter.js",
                 "core/ws.js",
-                "core/http.js"
+                "core/http.js",
+                "core/util.js"
             ],
             function()
             {

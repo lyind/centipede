@@ -334,7 +334,7 @@ function()
         // publish methods
         Object.defineProperty(app, "navigate", { value: navigate });
 
-        Object.defineProperty(app.subjects, ROUTE, { value: ROUTE });
+        Object.defineProperty(app.subject, ROUTE, { value: ROUTE });
 
 
     })(window.app, document, window.Rx, window.app.broker);

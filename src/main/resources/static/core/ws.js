@@ -92,10 +92,10 @@ function()
         // publish
         Object.defineProperty(app, "ws", { value: ws });
 
-        // status subjects
-        Object.defineProperty(app.subjects, WEBSOCKET_OPEN, { value: WEBSOCKET_OPEN});
-        Object.defineProperty(app.subjects, WEBSOCKET_CLOSE, { value: WEBSOCKET_CLOSE});
-        Object.defineProperty(app.subjects, WEBSOCKET_ERROR, { value: WEBSOCKET_ERROR});
+        // status subject
+        Object.defineProperty(app.subject, WEBSOCKET_OPEN, { value: WEBSOCKET_OPEN});
+        Object.defineProperty(app.subject, WEBSOCKET_CLOSE, { value: WEBSOCKET_CLOSE});
+        Object.defineProperty(app.subject, WEBSOCKET_ERROR, { value: WEBSOCKET_ERROR});
 
     })(window.app, window.Rx, window.app.broker);
 });

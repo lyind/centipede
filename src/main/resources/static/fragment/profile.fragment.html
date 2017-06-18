@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <meta charset="UTF-8">
 <div class="popover popover-bottom" style="position: fixed; top: 1rem; right: 1rem;">
-    <button class="btn btn-lg btn-action circle" style="height: 9rem; width: 9rem;"><img src="../pic/admin-user.svg"></button>
+    <button class="btn btn-lg btn-action circle" style="overflow:hidden; height: 7rem; width: 7rem;"><img id="profileGlyph" src="../pic/user.svg"></button>
     <div class="popover-container card" id="profileFrame">
         <form id="profileForm" hidden="true">
             <label class="form-label" for="profileFormName">Username</label>
             <div class="form-group">
                 <span class="input-group-addon">
-                    <img src="../pic/admin-user.svg" style="height: 1ex; width: 1ex;">
+                    <img src="../pic/user.svg">
                 </span>
                 <input id="profileFormName" tabIndex="1" type="text" class="form-input" placeholder="Username" name="name" required>
             </div>
@@ -34,7 +34,7 @@
                     .subscribe(app.ws.send);
 
                 // handle token values
-                app.broker(app.subjects.TOKEN).subscribe(function(token)
+                app.broker(app.subject.TOKEN).subscribe(function(token)
                 {
                     locals.root.setAttribute("hidden", (!token));
                 });
@@ -56,27 +56,67 @@
                     .subscribe(app.ws.send);
 
                 // handle token values
-                app.broker(app.subjects.TOKEN).subscribe(function(token)
+                app.broker(app.subject.TOKEN).subscribe(function(token)
                 {
                     locals.root.setAttribute("hidden", (!!token));
                 });
 
                 // handle login name changes
-                app.broker(app.subjects.CREDENTIALS).subscribe(function(credentials)
+                app.broker(app.subject.CREDENTIALS).subscribe(function(credentials)
                 {
                     locals.profileName.textContent = (credentials && credentials.name) ? credentials.name : "";
                 });
             });
             </script>
         </div>
-        <script>
+    </div>
+    <script>
         console.log("[profile.fragment] init");
         app.schedule(function(app, locals)
         {
             console.log("[profile.fragment] scheduled");
 
-            app.broker(app.subjects.TOKEN).pull();
+            // handle token values
+            app.broker(app.subject.TOKEN).subscribe(function(token)
+            {
+                console.log("[profile-fragment] token: ", token);
+
+                // persist token
+                if (app.storageAvailable("localStorage"))
+                {
+                    window.localStorage.setItem(app.subject.TOKEN, token);
+                }
+
+                // update profile glyph
+                locals.profileGlyph.src = (token) ? "../pic/user.svg" : "../pic/admin-user.svg";
+            });
+
+            // on token changes, if token is empty, redirect to index if not already there
+            app.broker(app.subject.TOKEN)
+                .filter(function(token) { console.log("[profile-fragment] checking token filter: ", token); return (!token); })
+                .flatMap(function(token) { console.log("[profile-fragment] checking token: ", token); return app.broker(app.subject.ROUTE); })
+                .filter(function(route) { console.log("[profile-fragment] at route: ", route); return route !== "" && route !== "/"; })
+                .subscribe(function(route)
+                {
+                    console.log("[profile-fragment] not authenticated: navigate to /");
+                    //app.navigate("");
+                });
+
+            // initialize TOKEN with stored token
+            app.broker(app.subject.TOKEN, function()
+                {
+                    var initialToken = "";
+                    if (app.storageAvailable("localStorage"))
+                    {
+                        initialToken = window.localStorage.getItem(app.subject.TOKEN);
+                        if (!initialToken)
+                        {
+                            initialToken = "";
+                        }
+                    }
+                    return Rx.Observable.of(initialToken);
+                }, true)
+                .pull();
         });
         </script>
-    </div>
 </div>

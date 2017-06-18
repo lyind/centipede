@@ -58,11 +58,11 @@ function()
         };
 
         // publish constant subject IDs
-        Object.defineProperty(app.subjects, SERVICES, { value: SERVICES });
-        Object.defineProperty(app.subjects, TOKEN, { value: TOKEN });
-        Object.defineProperty(app.subjects, CREDENTIALS, { value: CREDENTIALS });
-        Object.defineProperty(app.subjects, ERROR, { value: ERROR });
-        Object.defineProperty(app.subjects, OVERFLOW, { value: OVERFLOW });
+        Object.defineProperty(app.subject, SERVICES, { value: SERVICES });
+        Object.defineProperty(app.subject, TOKEN, { value: TOKEN });
+        Object.defineProperty(app.subject, CREDENTIALS, { value: CREDENTIALS });
+        Object.defineProperty(app.subject, ERROR, { value: ERROR });
+        Object.defineProperty(app.subject, OVERFLOW, { value: OVERFLOW });
 
         // publish splitter
         app.splitters.push(splitter);
