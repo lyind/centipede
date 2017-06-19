@@ -146,8 +146,8 @@ function()
                 var src = keepableNode.getAttribute("data-keep");
                 if (src)
                 {
-                    app.schedule(function()
-                    {
+                    //app(function(that, app)
+                    //{
                         if (src.endsWith(".js"))
                         {
                             // script only fragment requested
@@ -164,7 +164,7 @@ function()
                                 keepableNode.setAttribute("data-keep", "");  // flag as rendered
                             })
                         }
-                    });
+                    //});
                 }
             }
         };

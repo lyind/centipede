@@ -8,12 +8,12 @@
 <div>
     <a href="service-edit.html?id=123">Edit Service #123
         <script>
-        app.schedule(function(app, locals)
+        app(function(that, app)
         {
-            Rx.Observable.fromEvent(locals.root, 'click').subscribe(function(e)
+            app.eachClick(that.parent).subscribe(function(e)
             {
                 console.log("[index] service edit link: click: " + e.target.getAttribute('href'));
-                window.app.navigate(e.target.getAttribute('href'));
+                app.navigate(e.target.getAttribute('href'));
 
                 e.stopPropagation();
                 e.preventDefault();

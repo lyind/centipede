@@ -20,23 +20,24 @@
             </div>
             <button id="profileSignin" type="submit" class="btn btn-primary">Signin</button>
             <script>
-            app.schedule(function(app, locals)
+            app(function(that, app)
             {
                 // handle credential input
-                Rx.Observable.fromEvent(locals.root, "submit")
+                app.eachSubmit(that.parent)
                     .map(function(e)
                     {
-                        var name = locals.profileFormName.value;
-                        var password = locals.profileFormPassword.value;
+                        var name = that.profileFormName.value;
+                        var password = that.profileFormPassword.value;
 
                         return { "credentials": { "name": name, "password": password } };
                     })
-                    .subscribe(app.ws.send);
+                    .subscribe(app.ws);
 
                 // handle token values
-                app.broker(app.subject.TOKEN).subscribe(function(token)
+                app.broker(app.subject.TOKEN)
+                    .subscribe(function(token)
                 {
-                    locals.root.setAttribute("hidden", (!token));
+                    that.parent.setAttribute("hidden", (!token));
                 });
             });
             </script>
@@ -45,63 +46,37 @@
             <span id="profileName"></span>
             <button id="profileSignout" class="btn btn-primary">Logout</button>
             <script>
-            app.schedule(function(app, locals)
+            app(function(that, app)
             {
                 // handle click
-                Rx.Observable.fromEvent(locals.profileSignout, "click")
+                app.eachClick(that.profileSignout)
                     .map(function(e)
                     {
                         return { "credentials": {} };
                     })
-                    .subscribe(app.ws.send);
+                    .subscribe(app.ws);
 
                 // handle token values
-                app.broker(app.subject.TOKEN).subscribe(function(token)
-                {
-                    locals.root.setAttribute("hidden", (!!token));
-                });
+                app.broker(app.subject.TOKEN)
+                    .subscribe(function(token)
+                    {
+                        that.parent.setAttribute("hidden", (!!token));
+                    });
 
                 // handle login name changes
-                app.broker(app.subject.CREDENTIALS).subscribe(function(credentials)
-                {
-                    locals.profileName.textContent = (credentials && credentials.name) ? credentials.name : "";
-                });
+                app.broker(app.subject.CREDENTIALS)
+                    .subscribe(function(credentials)
+                    {
+                        that.profileName.textContent = (credentials && credentials.name) ? credentials.name : "";
+                    });
             });
             </script>
         </div>
     </div>
     <script>
-        app.schedule(function(app, locals)
+        app(function(that, app)
         {
-            // handle token values
-            app.broker(app.subject.TOKEN).subscribe(function(token)
-            {
-                console.log("[profile-fragment] token: ", token);
-
-                // persist token
-                if (app.storageAvailable("localStorage"))
-                {
-                    window.localStorage.setItem(app.subject.TOKEN, token);
-                }
-
-                // update profile glyph
-                locals.profileGlyph.src = (token) ? "../pic/admin-user.svg" : "../pic/user.svg";
-            });
-
-            // on token changes, if token is empty, redirect to index if not already there
-            app.broker(app.subject.TOKEN)
-                .filter(function(token) { return (!token); })
-                .flatMap(function(token) { return app.broker(app.subject.NEXT_ROUTE); })
-                .filter(function(route) { return route.strippedPath !== "" && route.strippedPath !== "/"; })
-                .take(1)
-                .subscribe(function(route)
-                {
-                    console.log("[profile-fragment] not authenticated: cancel routing attempt and navigate to: /");
-                    route.subscription.unsubscribe();
-                    app.navigate("/");
-                });
-
-            // initialize TOKEN with stored token
+            // initialize TOKEN from localStorage
             app.broker(app.subject.TOKEN, function()
                 {
                     var initialToken = "";
@@ -115,7 +90,30 @@
                     }
                     return Rx.Observable.of(initialToken);
                 }, true)
-                .pull();
+                .pull()
+                // update profile fragment UI state
+                .do(function(token)
+                {
+                    // persist token
+                    if (app.storageAvailable("localStorage"))
+                    {
+                        window.localStorage.setItem(app.subject.TOKEN, token);
+                    }
+
+                    // update profile glyph
+                    that.profileGlyph.src = (token) ? "../pic/admin-user.svg" : "../pic/user.svg";
+                })
+                // on token changes, if token is empty, redirect to index if not already there
+                .filter(function(token) { return (!token); })
+                .flatMap(function(token) { return app.broker(app.subject.NEXT_ROUTE); })
+                .take(1)
+                .filter(function(route) { return route.strippedPath !== "" && route.strippedPath !== "/"; })
+                .subscribe(function(route)
+                {
+                    console.log("[profile-fragment] no token: cancel routing, navigate from " + route.strippedPath + " to /");
+                    route.subscription.unsubscribe();
+                    app.navigate("/");
+                });
         });
         </script>
 </div>

@@ -31,7 +31,16 @@ function()
         const WEBSOCKET_CLOSE = "WEBSOCKET_CLOSE";
         const WEBSOCKET_ERROR = "WEBSOCKET_ERROR";
 
-        var ws = {};
+        // publish main ws function
+        // issues an asynchronous call, returns an observable registered with the broker
+        Object.defineProperty(app, "ws", { value: function(data)
+        {
+            if (app.ws.socket && app.ws.socket.readyState === 1)
+            {
+                app.ws.socket.send(data);
+            }
+        }});
+        var ws = app.ws;
 
         // reference to the current connection
         Object.defineProperty(ws, "socket", { writable: true});
@@ -47,7 +56,7 @@ function()
 
             ws.socket.onopen = function(event)
             {
-                console.log("websocket[" + ws.id + "]: opened");
+                console.log("[ws][" + ws.id + "] socket opened");
                 broker(WEBSOCKET_OPEN, function() { return Rx.Observable.of(ws.id); });
             };
 
@@ -55,7 +64,7 @@ function()
             {
                 if (event.wasClean)
                 {
-                    console.log("websocket[" + ws.id + "]: closed");
+                    console.log("[ws][" + ws.id + "] closed");
                     broker(WEBSOCKET_CLOSE, function() { return Rx.Observable.of(ws.id); });
                 }
             };
@@ -71,26 +80,13 @@ function()
 
             ws.socket.onerror = function(event)
             {
-                console.log("websocket[" + ws.id + "]: error, trying to re-connect");
+                console.log("[ws][" + ws.id + "] error, trying to re-connect");
 
                 broker(WEBSOCKET_ERROR, function() { return Rx.Observable.of(ws.id); });
 
                 setTimeout(500, function() { ws.open(url); });
             };
         };
-
-
-        // issue an asynchronous call, returns an observable registered with the broker
-        ws.send = function(data)
-        {
-            if (ws.socket && ws.socket.readyState === 1)
-            {
-                ws.socket.send(data);
-            }
-        };
-
-        // publish
-        Object.defineProperty(app, "ws", { value: ws });
 
         // status subject
         Object.defineProperty(app.subject, WEBSOCKET_OPEN, { value: WEBSOCKET_OPEN});

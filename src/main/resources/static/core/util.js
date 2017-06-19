@@ -50,5 +50,18 @@ function()
                     storage.length !== 0;
             }
         }});
+
+        // just a few shortcuts over using Observable.fromEvent() manually
+        Object.defineProperty(app, "eachClick", { value: function(element)
+        {
+            return Rx.Observable.fromEvent(element, "click");
+        }});
+
+
+        Object.defineProperty(app, "eachSubmit", { value: function(element)
+        {
+            return Rx.Observable.fromEvent(element, "submit");
+        }});
+
     })(window.app, window);
 });

@@ -10,14 +10,14 @@
     <a id="serviceEditBack" href="..">Back</a>
     <script>
     console.log("[service-edit] init");
-    app.schedule(function(app, locals)
+    app(function(that, app)
     {
         console.log("[service-edit] ready");
 
-        Rx.Observable.fromEvent(locals.serviceEditBack, 'click').subscribe(function(e)
+        app.eachClick(that.serviceEditBack).subscribe(function(e)
         {
             console.log("[service-edit] back link: click: " + e.target.getAttribute('href'));
-            window.app.navigate(e.target.getAttribute('href'));
+            app.navigate(e.target.getAttribute('href'));
 
             e.stopPropagation();
             e.preventDefault();

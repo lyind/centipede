@@ -24,12 +24,40 @@
     // start by loading external libraries and then our application
     if (!window.app)
     {
-        // publish app object
-        Object.defineProperty(window, "app", { value: {} });
+        // publish app main function
+        // calling it schedules a function to run after the app has been mounted
+        // the functions "this" will be pointing to the app instance
+        // the DOM element that is parent to the calling <script> element will be passed as second argument
+        Object.defineProperty(window, "app", { value: function(fn)
+        {
+            var script = document.currentScript;
+
+            // bind ourselves to the callback
+            Object.defineProperty(fn, "app", { value: this });
+
+            // bind all local elements by id
+            Object.defineProperty(fn, "parent", { value: (script && script.parentNode) ? script.parentNode : undefined});
+            if (fn.parent)
+            {
+                Array.prototype.forEach.call(fn.parent.querySelectorAll('*[id]:not([id=""])'), function(e)
+                {
+                    Object.defineProperty(fn, e.id, { value: e });
+                });
+            }
+
+            if (readyState < 2)
+            {
+                scheduled.push(fn);
+            }
+            else
+            {
+                fn(fn, window.app);
+            }
+        }});
         var app = window.app;
 
         // set app root URL to the parent of this scripts directory
-        Object.defineProperty(app, "root", { value:
+        Object.defineProperty(app, "baseUrl", { value:
             (function()
             {
               var src = document.currentScript.src;
@@ -75,7 +103,7 @@
             var basePath = "";
             if (relativeSegments.length <= 0 || relativeSegments[0] !== "")
             {
-                basePath = app.root.pathname;
+                basePath = app.baseUrl.pathname;
             }
             else
             {
@@ -236,49 +264,6 @@
         };
 
 
-        // find the parent of the last loaded <script> tag
-        var findLocalElements = function()
-        {
-            var script = document.currentScript;
-
-            // bind all IDs
-            var locals = {};
-            Object.defineProperty(locals, "root", { value: (script && script.parentNode) ? script.parentNode : undefined});
-            if (locals.root)
-            {
-                Array.prototype.forEach.call(locals.root.querySelectorAll('*[id]:not([id=""])'), function(e)
-                {
-                    Object.defineProperty(locals, e.id, { value: e });
-                });
-            }
-
-            return locals;
-        };
-
-
-        // schedule a function to run after the app has been mounted
-        // the function will be passed the app instance as first argument
-        // the DOM element that is parent to the calling <script> element will be passed as second argument
-        var schedule = function(fn)
-        {
-            var locals = findLocalElements();
-            var task = fn;
-            if (locals.root !== undefined)
-            {
-                task = function(app) { fn(app, locals); };
-            }
-
-            if (readyState < 2)
-            {
-                scheduled.push(task);
-            }
-            else
-            {
-                task(app);
-            }
-        };
-
-
         // run scheduled functions on the second call
         var considerRunningScheduled = function()
         {
@@ -288,7 +273,7 @@
                 var job = undefined;
                 while((job = scheduled.shift()) != null)
                 {
-                    job(app);
+                    job(job, app);
                 }
             }
         };
@@ -322,7 +307,6 @@
             Object.defineProperty(app, "require", { value: require });
             Object.defineProperty(app, "requireAllLoaded", { value: requireAllLoaded });
             Object.defineProperty(app, "resetReadyState", { value: resetReadyState });
-            Object.defineProperty(app, "schedule", { value: schedule });
             Object.defineProperty(app, "isObject", { value: isObject });
 
             // load core components
@@ -336,11 +320,9 @@
             ],
             function()
             {
-                console.log("mounting app");
+                console.log("[app] mounted at: " + app.baseUrl.pathname);
 
-                console.log("app mounted at: " + app.root.pathname);
-
-                app.ws.open(app.root.href.replace("http", "ws"));
+                app.ws.open(app.baseUrl.href.replace("http", "ws"));
 
                 doRedirect();
             });
