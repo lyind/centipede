@@ -1,26 +1,22 @@
 <!DOCTYPE html>
 <meta charset="utf-8"/>
-<link rel="stylesheet" href="lib/spectre.css">
+<link rel="stylesheet" href="core/app.css">
 <title>Centipede Index</title>
 <script src="/core/app.js"></script>
-<h1>Please enable JavaScript to use this application.<script>document.currentScript.parentNode.setAttribute("hidden", true);</script></h1>
+<h1>Please enable JavaScript to use this application.<script>document.currentScript.parentNode.setAttribute("hidden", "");</script></h1>
 <div id="profile.fragment" data-keep="fragment/profile.fragment.html"></div>
 <div>
+    <a href="service-edit.html?id=123" onclick="app.handle(event)">Edit Service #123</a>
+    <!--
     <a href="service-edit.html?id=123">Edit Service #123
+
         <script>
         app(function(that, app)
         {
-            app.eachClick(that.parent).subscribe(function(e)
-            {
-                console.log("[index] service edit link: click: " + e.target.getAttribute('href'));
-                app.navigate(e.target.getAttribute('href'));
-
-                e.stopPropagation();
-                e.preventDefault();
-            });
+            app.eachClick(that.parent).subscribe(app.navigate);
         });
         </script>
     </a>
-
+    -->
 
 </div>

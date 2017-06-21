@@ -19,6 +19,7 @@
 // WebSocket subject (ws) sub-protocol client
 app.require([
     "lib/Rx.js",
+    "core/util.js",
     "core/broker.js"
 ],
 function()
@@ -37,6 +38,10 @@ function()
         {
             if (app.ws.socket && app.ws.socket.readyState === 1)
             {
+                if (app.isObject(data))
+                {
+                    data = JSON.stringify(data);
+                }
                 app.ws.socket.send(data);
             }
         }});
@@ -72,9 +77,17 @@ function()
             ws.socket.onmessage = function(event)
             {
                 // use the provided splitter to split the message and feed information to the correct channel
-                if (app.splitters)
+                var splitters = app.splitters;
+                if (splitters)
                 {
-                    app.splitters.forEach(function(splitter) { splitter(broker, event.data); });
+                    for (var i = 0; i < splitters.length; ++i)
+                    {
+                        var parts = splitters[i](event.data);
+                        for (var j = 0; j < parts.length; ++j)
+                        {
+                            broker(parts[j][0], parts[j][1]).pull();
+                        }
+                    }
                 }
             };
 

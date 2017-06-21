@@ -233,7 +233,7 @@ function()
         };
 
 
-        var navigate = function(relativePath)
+        var navigateRelative = function(relativePath)
         {
             var parts = splitPath(relativePath);
             var canonicalPathWithArgs = app.canonicalizePath(parts.path);
@@ -332,6 +332,27 @@ function()
 
             console.log("[ui] navigate scheduled");
         };
+
+
+        var navigate = function(relativeDestination)
+        {
+            var dst = relativeDestination;
+            if (dst instanceof Object && dst.originalEvent)
+            {
+                dst.stopPropagation();
+                dst.preventDefault();
+                dst = dst.originalEvent;
+            }
+
+            if (dst instanceof Event)
+                dst = dst.target;
+
+            if (dst instanceof Element)
+                dst = dst.getAttribute("href");
+
+            navigateRelative(dst);
+        };
+
 
         // publish methods and constants
         Object.defineProperty(app, "navigate", { value: navigate });

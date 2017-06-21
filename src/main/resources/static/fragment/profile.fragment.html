@@ -1,76 +1,81 @@
 <!DOCTYPE html>
 <meta charset="UTF-8">
-<div class="popover popover-bottom" style="position: fixed; top: 1rem; right: 1rem;">
-    <button class="btn btn-lg btn-action circle" style="overflow:hidden; height: 7rem; width: 7rem;"><img id="profileGlyph" src="../pic/user.svg"></button>
-    <div class="popover-container card" id="profileFrame">
-        <form id="profileForm" hidden="true">
-            <label class="form-label" for="profileFormName">Username</label>
-            <div class="form-group">
-                <span class="input-group-addon">
-                    <img src="../pic/user.svg">
-                </span>
-                <input id="profileFormName" tabIndex="1" type="text" class="form-input" placeholder="Username" name="name" required>
-            </div>
-            <label class="form-label" for="profileFormPassword">Password</label>
-            <div class="form-group">
-                <span class="input-group-addon">
-                    <img src="../pic/key.svg" style="height: 1ex; width: 1ex;">
-                </span>
-                <input id="profileFormPassword" tabIndex="2" type="password" class="form-input" placeholder="Password" name="password" required>
-            </div>
-            <button id="profileSignin" type="submit" class="btn btn-primary">Signin</button>
-            <script>
-            app(function(that, app)
-            {
-                // handle credential input
-                app.eachSubmit(that.parent)
-                    .map(function(e)
+<link rel="stylesheet" href="core/app.css">
+<script src="/core/app.js"></script>
+<div class="popover popover-left" style="position: fixed; top: 1rem; right: 1rem;">
+    <button class="btn btn-lg btn-action circle" style="overflow:hidden; height: 7rem; width: 7rem;"><img class="no-touch" id="profileGlyph" src="../pic/user.svg"></button>
+    <div class="popover-container" style="margin-top:10rem; margin-right:-5rem;">
+        <div id="profileFrame" class="card text-left">
+            <div class="card-title"><h3>Profile</h3></div>
+            <div class="card-body">
+                <form id="profileForm" hidden="">
+                    <label class="form-label" for="profileFormName">Username</label>
+                    <div class="input-group">
+                        <div class="input-group-addon addon-lg" style="width: 4rem; padding:0; background-image: none, url('../pic/user.svg'); background-size: contain; background-repeat: no-repeat;"></div>
+                        <input id="profileFormName" tabIndex="1" type="text" class="form-input input-lg" placeholder="Username" name="name" required>
+                    </div>
+                    <label class="form-label" for="profileFormPassword">Password</label>
+                    <div class="input-group">
+                        <div class="input-group-addon addon-lg" style="width: 4rem; padding:0; background-image: none, url('../pic/key.svg'); background-size: contain; background-repeat: no-repeat;"></div>
+                        <input id="profileFormPassword" tabIndex="2" type="password" class="form-input input-lg" placeholder="Password" name="password" required>
+                    </div>
+                    <br />
+                    <button id="profileSignin" type="submit" class="btn btn-primary">Signin</button>
+                    <script>
+                    app(function(that, app)
                     {
-                        var name = that.profileFormName.value;
-                        var password = that.profileFormPassword.value;
+                        // handle credential input
+                        app.eachSubmit(that.parent)
+                            .map(function(e)
+                            {
+                                var name = that.profileFormName.value;
+                                var password = that.profileFormPassword.value;
 
-                        return { "credentials": { "name": name, "password": password } };
-                    })
-                    .subscribe(app.ws);
+                                return { "credentials": { "name": name, "password": password }, "token": "" };
+                            })
+                            .subscribe(app.ws);
 
-                // handle token values
-                app.broker(app.subject.TOKEN)
-                    .subscribe(function(token)
-                {
-                    that.parent.setAttribute("hidden", (!token));
-                });
-            });
-            </script>
-        </form>
-        <div id="profileInfo" hidden="true">
-            <span id="profileName"></span>
-            <button id="profileSignout" class="btn btn-primary">Logout</button>
-            <script>
-            app(function(that, app)
-            {
-                // handle click
-                app.eachClick(that.profileSignout)
-                    .map(function(e)
-                    {
-                        return { "credentials": {} };
-                    })
-                    .subscribe(app.ws);
-
-                // handle token values
-                app.broker(app.subject.TOKEN)
-                    .subscribe(function(token)
-                    {
-                        that.parent.setAttribute("hidden", (!!token));
+                        // handle token values
+                        app.broker(app.subject.TOKEN)
+                            .subscribe(function(token)
+                        {
+                            app.hide(that.parent, !!token);
+                        });
                     });
-
-                // handle login name changes
-                app.broker(app.subject.CREDENTIALS)
-                    .subscribe(function(credentials)
+                    </script>
+                </form>
+                <div id="profileInfo" hidden="">
+                    <h4 id="profileName"></h4>
+                    <button id="profileSignout" class="btn btn-primary">Logout</button>
+                    <script>
+                    app(function(that, app)
                     {
-                        that.profileName.textContent = (credentials && credentials.name) ? credentials.name : "";
+                        // handle click
+                        app.eachClick(that.profileSignout)
+                            .map(function(e)
+                            {
+                                return { "credentials": {} };
+                            })
+                            .subscribe(app.ws);
+
+                        // handle token values
+                        app.broker(app.subject.TOKEN)
+                            .subscribe(function(token)
+                            {
+                                console.log("hiding logout button");
+                                app.hide(that.parent, !token);
+                            });
+
+                        // handle login name changes
+                        app.broker(app.subject.CREDENTIALS)
+                            .subscribe(function(credentials)
+                            {
+                                that.profileName.textContent = (credentials && credentials.name) ? credentials.name : "";
+                            });
                     });
-            });
-            </script>
+                    </script>
+                </div>
+            </div>
         </div>
     </div>
     <script>
@@ -87,6 +92,7 @@
                         {
                             initialToken = "";
                         }
+                        initialToken = "";
                     }
                     return Rx.Observable.of(initialToken);
                 }, true)
@@ -97,22 +103,46 @@
                     // persist token
                     if (app.storageAvailable("localStorage"))
                     {
-                        window.localStorage.setItem(app.subject.TOKEN, token);
+                        if (token)
+                            window.localStorage.setItem(app.subject.TOKEN, token);
+                        else
+                            window.localStorage.removeItem(app.subject.TOKEN);
                     }
 
                     // update profile glyph
                     that.profileGlyph.src = (token) ? "../pic/admin-user.svg" : "../pic/user.svg";
                 })
                 // on token changes, if token is empty, redirect to index if not already there
-                .filter(function(token) { return (!token); })
+                .filter(function(token) { return !token; })
                 .flatMap(function(token) { return app.broker(app.subject.NEXT_ROUTE); })
                 .take(1)
-                .filter(function(route) { return route.strippedPath !== "" && route.strippedPath !== "/"; })
+                .filter(function(route) { return route.strippedPath !== "/signin.html" && route.strippedPath !== "signin.html"; })
                 .subscribe(function(route)
                 {
-                    console.log("[profile-fragment] no token: cancel routing, navigate from " + route.strippedPath + " to /");
+                    console.log("[profile-fragment] cancel routing to " + route.strippedPath + ", please sign in first");
                     route.subscription.unsubscribe();
+                    app.navigate("/signin.html");
+                });
+
+            // if we were on the signin page and received a token, navigate back to index (improve this)
+            app.broker(app.subject.TOKEN)
+                .filter(function(token) { return !!token; })
+                .flatMap(function(token) { return app.broker(app.subject.ROUTE); })
+                .take(1)
+                .filter(function(route) { return route.strippedPath === "/signin.html" || route.strippedPath === "signin.html"; })
+                .subscribe(function(route)
+                {
+                    console.log("[profile-fragment] signed in");
                     app.navigate("/");
+                });
+
+            // reset token on UNAUTHORIZED error
+            app.broker(app.subject.ERROR)
+                //.filter(function(error) { return "UNAUTHORIZED" === error; })
+                .subscribe(function(unauthorized)
+                {
+                    console.log("error: ", unauthorized);
+                    app.broker(app.subject.TOKEN, function() { return Rx.Observable.of(""); });
                 });
         });
         </script>

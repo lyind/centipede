@@ -16,25 +16,11 @@
  */
 "use strict";
 
-// UI helper
+// Require custom parts for this specific app, using common parts from /core and /lib
 app.require([
-    "lib/Rx.js"
+    "custom/centipede-splitter.js"
 ],
 function()
 {
-    console.log("[http] init");
-
-    (function(app, document, Rx)
-    {
-        var GET = function(url, responseType, headers)
-        {
-            return Rx.Observable.ajax({ method: 'GET', url: url, responseType: responseType, headers: headers })
-                .map(function(ajaxResponse) { return ajaxResponse.response; });
-        };
-
-        // publish methods
-        Object.defineProperty(app, "GET", { value: GET });
-
-    })(window.app, document, window.Rx);
-
+    console.log("[custom] loaded all custom extensions");
 });

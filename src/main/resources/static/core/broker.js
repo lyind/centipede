@@ -48,7 +48,7 @@ function()
 
             if (supplier && (!onlyIfEmpty || channel.supplier === undefined))
             {
-                channel.supplier = supplier;
+                channel.supplier = (app.isFunction(supplier)) ? supplier : function() { return Rx.Observable.of(supplier); };
             }
 
             return channel.observable;

@@ -20,7 +20,7 @@
 app.require([],
 function()
 {
-    console.log("[ui] init");
+    console.log("[util] init");
 
     (function(app, window)
     {
@@ -51,16 +51,46 @@ function()
             }
         }});
 
+
+        Object.defineProperty(app, "hide", { value: function(element, isHidden)
+        {
+            if (isHidden)
+                element.setAttribute("hidden", "");
+            else
+                element.removeAttribute("hidden");
+        }});
+
+
+        // Test if a value is an object
+        Object.defineProperty(app, "isObject", { value: function(value)
+        {
+            return value === Object(value);
+        }});
+
+
+        // Test if a value is a function (Date, Array, Object... are functions too)
+        Object.defineProperty(app, "isFunction", { value: function(value)
+        {
+            return typeof(value) === 'function';
+        }});
+
+
+        var stopEventPropagation = function(e)
+        {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+
         // just a few shortcuts over using Observable.fromEvent() manually
         Object.defineProperty(app, "eachClick", { value: function(element)
         {
-            return Rx.Observable.fromEvent(element, "click");
+            return Rx.Observable.fromEvent(element, "click").do(stopEventPropagation);
         }});
 
 
         Object.defineProperty(app, "eachSubmit", { value: function(element)
         {
-            return Rx.Observable.fromEvent(element, "submit");
+            return Rx.Observable.fromEvent(element, "submit").do(stopEventPropagation);
         }});
 
     })(window.app, window);

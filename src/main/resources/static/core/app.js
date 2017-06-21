@@ -81,7 +81,6 @@
             // notify waiters
             script.onload = function()
             {
-                console.log("[app] loaded: " + url);
                 var callbacks = requireStore[url];
 
                 var cb = undefined;
@@ -139,13 +138,6 @@
             }
 
             return (segments.length === 0) ? "/" : segments.join("/");
-        };
-
-
-        // Test if a value is an object
-        var isObject = function(value)
-        {
-            return value === Object(value);
         };
 
 
@@ -288,6 +280,41 @@
         };
 
 
+        // perform certain default actions, depending on the type of element
+        var handle = function(event)
+        {
+            var handler = undefined;
+            if (event instanceof Event)
+            {
+                var target = event.target;
+                if (event.type === "click" && target && (target.nodeName === "a" || target.nodeName === "A"))
+                {
+                    handler = function(that, app)
+                    {
+                        // that from document.currentScript won't ever be available in the context of an event handler
+                        app.navigate(target.pathname + target.hash + target.search);
+                    }
+                }
+                else
+                {
+                    console.log("[app] no default action for: ", event);
+                }
+            }
+            else
+            {
+                console.log("[app] handle() can only handle events, not this: ", event);
+            }
+
+            if (handler !== undefined)
+            {
+                event.stopPropagation();
+                event.preventDefault();
+
+                app(handler);
+            }
+        };
+
+
         // redirect to actual component, if not at root
         var doRedirect = function()
         {
@@ -307,16 +334,16 @@
             Object.defineProperty(app, "require", { value: require });
             Object.defineProperty(app, "requireAllLoaded", { value: requireAllLoaded });
             Object.defineProperty(app, "resetReadyState", { value: resetReadyState });
-            Object.defineProperty(app, "isObject", { value: isObject });
+            Object.defineProperty(app, "handle", { value: handle });
 
             // load core components
             require([
                 "core/broker.js",
                 "core/ui.js",
-                "core/centipede-splitter.js",
                 "core/ws.js",
                 "core/http.js",
-                "core/util.js"
+                "core/util.js",
+                "custom/custom.js"  // all app-specific custom code
             ],
             function()
             {

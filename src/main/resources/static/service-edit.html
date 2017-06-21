@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <meta charset="utf-8"/>
-<link rel="stylesheet" href="lib/spectre.css">
+<link rel="stylesheet" href="core/app.css">
 <title>Centipede - Edit Service</title>
 <script src="/core/app.js"></script>
 <div id="profile.fragment" data-keep="fragment/profile.fragment.html"></div>
@@ -12,11 +12,8 @@
     console.log("[service-edit] init");
     app(function(that, app)
     {
-        console.log("[service-edit] ready");
-
         app.eachClick(that.serviceEditBack).subscribe(function(e)
         {
-            console.log("[service-edit] back link: click: " + e.target.getAttribute('href'));
             app.navigate(e.target.getAttribute('href'));
 
             e.stopPropagation();

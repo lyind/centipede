@@ -17,15 +17,12 @@
 "use strict";
 
 // Centipede splitter
-app.require([
-    "lib/Rx.js",
-    "core/broker.js"
-],
+app.require("core/broker.js",
 function()
 {
     console.log("[centipede-splitter] init");
 
-    (function(app, broker, Rx)
+    (function(app)
     {
         const SERVICES = "SERVICES";
         const TOKEN = "TOKEN";
@@ -33,28 +30,44 @@ function()
         const ERROR = "ERROR";
         const OVERFLOW = "OVERFLOW";
 
-        var splitter = function(broker, message)
+
+        var splitter = function(message)
         {
-            if (message.services != null)
+            var parts = [];
+            if (message instanceof ArrayBuffer)
             {
-                broker(SERVICES, function() { return Rx.Observable.of(message.services); });
+                console.log("[centipede-splitter] can't handle message with ArrayBuffer payload");
             }
-            if (message.token != null)
+            else if (message instanceof Blob)
             {
-                broker(TOKEN, function() { return Rx.Observable.of(message.token); });
+                console.log("[centipede-splitter] can't handle message with Blob payload");
             }
-            if (message.credentials != null)
+            else
             {
-                broker(CREDENTIALS, function() { return Rx.Observable.of(message.credentials); });
+                message = JSON.parse(message);
+                if (message.services != null)
+                {
+                    parts.push([SERVICES, message.services]);
+                }
+                if (message.token != null)
+                {
+                    parts.push([TOKEN, message.token]);
+                }
+                if (message.credentials != null)
+                {
+                    parts.push([CREDENTIALS, message.credentials]);
+                }
+                if (message.error != null)
+                {
+                    parts.push([ERROR, message.error]);
+                }
+                if (message.overflow != null)
+                {
+                    parts.push([OVERFLOW, true]);
+                }
             }
-            if (message.error != null)
-            {
-                broker(ERROR, function() { return Rx.Observable.of(message.error); });
-            }
-            if (message.overflow != null)
-            {
-                broker(OVERFLOW, function() { return Rx.Observable.of(true); });
-            }
+
+            return parts;
         };
 
         // publish constant subject IDs
@@ -67,5 +80,5 @@ function()
         // publish splitter
         app.splitters.push(splitter);
 
-    })(window.app, window.app.broker, window.Rx);
+    })(window.app);
 });
