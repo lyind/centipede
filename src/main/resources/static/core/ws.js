@@ -32,16 +32,32 @@ function()
         const WEBSOCKET_CLOSE = "WEBSOCKET_CLOSE";
         const WEBSOCKET_ERROR = "WEBSOCKET_ERROR";
 
+        // keep these subjects available
+        broker(WEBSOCKET_OPEN).subscribe();
+        broker(WEBSOCKET_CLOSE).subscribe();
+        broker(WEBSOCKET_ERROR).subscribe();
+
         // publish main ws function
         // issues an asynchronous call, returns an observable registered with the broker
         Object.defineProperty(app, "ws", { value: function(data)
         {
             if (app.ws.socket && app.ws.socket.readyState === 1)
             {
+                // use the provided joiners to convert/enhance the message
+                var joiners = app.joiners;
+                if (joiners)
+                {
+                    for (var i = 0; i < joiners.length; ++i)
+                    {
+                        data = joiners[i](data);
+                    }
+                }
+
                 if (app.isObject(data))
                 {
                     data = JSON.stringify(data);
                 }
+
                 app.ws.socket.send(data);
             }
         }});
@@ -62,7 +78,7 @@ function()
             ws.socket.onopen = function(event)
             {
                 console.log("[ws][" + ws.id + "] socket opened");
-                broker(WEBSOCKET_OPEN, function() { return Rx.Observable.of(ws.id); });
+                broker(WEBSOCKET_OPEN, function() { return Rx.Observable.of(ws.id); }).pull();
             };
 
             ws.socket.onclose = function(event)
@@ -70,7 +86,7 @@ function()
                 if (event.wasClean)
                 {
                     console.log("[ws][" + ws.id + "] closed");
-                    broker(WEBSOCKET_CLOSE, function() { return Rx.Observable.of(ws.id); });
+                    broker(WEBSOCKET_CLOSE, function() { return Rx.Observable.of(ws.id); }).pull();
                 }
             };
 
@@ -85,7 +101,15 @@ function()
                         var parts = splitters[i](event.data);
                         for (var j = 0; j < parts.length; ++j)
                         {
-                            broker(parts[j][0], parts[j][1]).pull();
+                            if (parts[j].length > 1)
+                            {
+                                // inject event or regular cached value
+                                broker(parts[j][0], parts[j][1], parts[j][2]).pull();
+                            }
+                            else
+                            {
+                                console.error("[ws] splitter returned invalid parts: ", parts[j]);
+                            }
                         }
                     }
                 }
@@ -95,7 +119,7 @@ function()
             {
                 console.log("[ws][" + ws.id + "] error, trying to re-connect");
 
-                broker(WEBSOCKET_ERROR, function() { return Rx.Observable.of(ws.id); });
+                broker(WEBSOCKET_ERROR, function() { return Rx.Observable.of(ws.id); }).pull();
 
                 setTimeout(500, function() { ws.open(url); });
             };
@@ -105,6 +129,10 @@ function()
         Object.defineProperty(app.subject, WEBSOCKET_OPEN, { value: WEBSOCKET_OPEN});
         Object.defineProperty(app.subject, WEBSOCKET_CLOSE, { value: WEBSOCKET_CLOSE});
         Object.defineProperty(app.subject, WEBSOCKET_ERROR, { value: WEBSOCKET_ERROR});
+
+        // sub-protocol joiner and splitter registry (like input/output filters)
+        Object.defineProperty(app, "splitters", { value: [] });
+        Object.defineProperty(app, "joiners", { value: [] });
 
     })(window.app, window.Rx, window.app.broker);
 });

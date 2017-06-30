@@ -26,8 +26,9 @@ function()
 {
     console.log("[ui] init");
 
-    (function(app, document, Rx, broker)
+    (function(app, document, Rx, broker, brokerEvent)
     {
+        const LEAVE_ROUTE = "LEAVE_ROUTE";
         const NEXT_ROUTE = "NEXT_ROUTE";
         const ROUTE = "ROUTE";
 
@@ -35,6 +36,10 @@ function()
         var keepStore = document.implementation.createDocument('', 'html', html5doctype);
         var encounteredScriptUrls = {};
 
+        // ensure these subjects are kept available
+        brokerEvent(LEAVE_ROUTE).subscribe();
+        brokerEvent(NEXT_ROUTE).subscribe();
+        broker(ROUTE).subscribe();
 
         // request a full DOM document
         var getDocument = function(canonicalPath)
@@ -89,7 +94,7 @@ function()
         var placeKeepAnnotated = function(sourceDocument, targetDocument)
         {
             var nodesToKeep = [];
-            var nodesToKeepFromCurrent = sourceDocument.querySelectorAll("[data-keep]");
+            var nodesToKeepFromCurrent = sourceDocument.querySelectorAll('[data-keep=""]');
             for (var i = 0; i < nodesToKeepFromCurrent.length; ++i)
             {
                 nodesToKeep.push(nodesToKeepFromCurrent[i]);
@@ -116,6 +121,8 @@ function()
                         var node = targetDocument.importNode(sourceNode, true);
                         template.parentNode.replaceChild(node, template);
                         sourceNodeParent.removeChild(sourceNode);
+
+                        node.setAttribute("initialized", "");
                     }
                     else
                     {
@@ -139,32 +146,29 @@ function()
                 }
             }
 
-            var newKeepables = targetDocument.querySelectorAll("[data-keep]");
+            var newKeepables = targetDocument.querySelectorAll('[data-keep]:not([data-keep=""])');
             for (var i = 0; i < newKeepables.length; ++i)
             {
                 var keepableNode = newKeepables[i];
                 var src = keepableNode.getAttribute("data-keep");
                 if (src)
                 {
-                    //app(function(that, app)
-                    //{
-                        if (src.endsWith(".js"))
+                    if (src.endsWith(".js"))
+                    {
+                        // script only fragment requested
+                        app.require(src, function() { keepableNode.setAttribute("data-keep", ""); });
+                    }
+                    else
+                    {
+                        // HTML fragment requested
+                        getFragment(targetDocument, app.canonicalizePath(src)).subscribe(function(fragment)
                         {
-                            // script only fragment requested
-                            app.require(src, function() { keepableNode.setAttribute("data-keep", ""); });
-                        }
-                        else
-                        {
-                            // HTML fragment requested
-                            getFragment(targetDocument, app.canonicalizePath(src)).subscribe(function(fragment)
-                            {
-                                keepableNode.appendChild(fragment);
-                                forceScriptExecution(targetDocument, Array.prototype.map.call(keepableNode.getElementsByTagName("script"), function(node) { return node; }));
+                            keepableNode.appendChild(fragment);
+                            forceScriptExecution(targetDocument, Array.prototype.map.call(keepableNode.getElementsByTagName("script"), function(node) { return node; }));
 
-                                keepableNode.setAttribute("data-keep", "");  // flag as rendered
-                            })
-                        }
-                    //});
+                            keepableNode.setAttribute("data-keep", "");  // flag as rendered
+                        })
+                    }
                 }
             }
         };
@@ -199,7 +203,7 @@ function()
 
         var splitRoute = function(canonicalPathWithArgs)
         {
-            var route = { routes: [], strippedPath: "", subscription: undefined };
+            var route = { routes: [], strippedPath: "", subscription: undefined, canonicalPathWithArgs: canonicalPathWithArgs };
 
             var path = [];
             var args = [];
@@ -241,10 +245,13 @@ function()
 
             // copy reference to avoid some firefox bug
             var currentDocument = document;
-            var subscription = getDocument(route.strippedPath).subscribe(function(newDocument)
+            route.subscription = getDocument(route.strippedPath).subscribe(function(newDocument)
             {
                 try
                 {
+                    // notify subscribers about next route (subscribers may cancel the routing attempt using "subscription"
+                    brokerEvent(app.subject.LEAVE_ROUTE, function() { return Rx.Observable.of(route); }).pull();
+
                     app.resetReadyState();
 
                     // place persistent elements with "keep=PARENT_ID" attribute
@@ -260,11 +267,11 @@ function()
                     // publish argument updates for all parent routes and this route
                     for (var i = 0; i < route.routes; ++i)
                     {
-                        app.broker([ROUTE, route.routes[i].path], function() { return Rx.Observable.of(route.routes[i].args); }).pull();
+                        broker([ROUTE, route.routes[i].path], function() { return Rx.Observable.of(route.routes[i].args); }).pull();
                     }
 
                     // notify subscribers about changed route
-                    app.broker(ROUTE, function() { return Rx.Observable.of(route); }).pull();
+                    broker(ROUTE, function() { return Rx.Observable.of(route); }).pull();
 
                     // perform document replace
                     currentDocument.replaceChild(newDocument.documentElement, currentDocument.documentElement);
@@ -286,7 +293,7 @@ function()
                         {
                             if (Object.prototype.hasOwnProperty.call(encounteredScriptUrls, script.src))
                             {
-                                console.log("[ui] skip: ", script.src);
+                                //console.log("[ui] skip: ", script.src);
                                 // skip this script
                                 return false;
                             }
@@ -327,8 +334,7 @@ function()
             });
 
             // notify subscribers about next route (subscribers may cancel the routing attempt using "subscription"
-            route.subscription = subscription;
-            app.broker(NEXT_ROUTE, function() { return Rx.Observable.of(route); }).pull();
+            brokerEvent(NEXT_ROUTE, function() { return Rx.Observable.of(route); }).pull();
 
             console.log("[ui] navigate scheduled");
         };
@@ -336,6 +342,11 @@ function()
 
         var navigate = function(relativeDestination)
         {
+            if (relativeDestination === undefined || relativeDestination === null)
+            {
+                return brokerEvent(LEAVE_ROUTE);
+            }
+
             var dst = relativeDestination;
             if (dst instanceof Object && dst.originalEvent)
             {
@@ -356,9 +367,10 @@ function()
 
         // publish methods and constants
         Object.defineProperty(app, "navigate", { value: navigate });
-        Object.defineProperty(app.subject, ROUTE, { value: ROUTE });
+        Object.defineProperty(app.subject, LEAVE_ROUTE, { value: LEAVE_ROUTE });
         Object.defineProperty(app.subject, NEXT_ROUTE, { value: NEXT_ROUTE });
+        Object.defineProperty(app.subject, ROUTE, { value: ROUTE });
 
-    })(window.app, document, window.Rx, window.app.broker);
+    })(window.app, document, window.Rx, window.app.broker, window.app.brokerEvent);
 
 });

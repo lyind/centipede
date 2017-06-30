@@ -32,6 +32,7 @@ import net.talpidae.base.util.session.SessionHolder;
 import net.talpidae.centipede.bean.service.Api;
 import net.talpidae.centipede.service.calls.CallHandler;
 import net.talpidae.centipede.service.calls.CallException;
+import net.talpidae.centipede.service.calls.Security;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -239,6 +240,12 @@ public class ApiRunnableFactory
 
                 result = modifiedResult;
             }
+        }
+        catch (Security.AuthenticationException e)
+        {
+            log.debug("session: {}: {}", session.getId(), e.getMessage());
+            result.setToken("");
+            result.setError(e.getMessage());
         }
         catch (CallException e)
         {

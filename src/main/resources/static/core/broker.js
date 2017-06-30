@@ -24,36 +24,101 @@ function()
 {
     console.log("[broker] init");
 
+
+    // Class Channel implements the broker core subject
+    function Channel(subject, isEvent, onDereference)
+    {
+        // we inherit from Subscriber
+        Rx.Subscriber.call(this, this);
+
+        this.onDereference = onDereference;
+        this._supplier = undefined;
+        this.subscription = undefined;
+        this.subject = subject;
+        this.cache = (isEvent) ? new Rx.ReplaySubject(1) : new Rx.Subject();
+
+        var thisChannel = this;
+
+        // output observable with added method pull()
+        this.observable = this.cache.asObservable()
+            // destructor (called after the last subscriber disconnected)
+            .finally(function()
+            {
+                console.log("[broker] destroy: " + thisChannel.subject);
+
+                if (thisChannel.subscription)
+                {
+                    thisChannel.subscription.unsubscribe();
+                }
+
+                if (thisChannel.onDereference)
+                {
+                    thisChannel.onDereference();
+                }
+            });
+
+        this.observable = (isEvent) ? this.observable.share() : this.observable.publishReplay(1).refCount();
+
+        // Add pull() property to the returned Observable which allows requesting the next value
+        Object.defineProperty(this.observable, "pull", { value: function()
+        {
+            // un-subscribe from previous source
+            if (thisChannel.subscription)
+            {
+                thisChannel.subscription.unsubscribe();
+            }
+
+            var newValues = (thisChannel._supplier) ? thisChannel._supplier() : Rx.Observable.empty();
+            thisChannel.subscription = newValues.subscribe(thisChannel);
+            if (newValues.pull)
+            {
+                // allow broker subject to connect to broker subject
+                newValues.pull();
+            }
+
+            return this;
+        }});
+    }
+
+    Channel.prototype = Object.create(Rx.Subscriber.prototype);
+
+    Channel.prototype.constructor = Channel;
+
+    Channel.prototype.asObservable = function() { return this.observable; };
+
+    Channel.prototype.setSupplier = function(newSupplier)
+    {
+        if (typeof newSupplier === 'function')
+        {
+            this._supplier = newSupplier;
+        }
+        else
+        {
+            console.error("[broker] ignore supplier for " + this.subject + ": not a function: ", newSupplier);
+            console.trace();
+        }
+    };
+
+    Channel.prototype.next = function(value)
+    {
+        this.cache.next(value);
+    };
+
+    Channel.prototype.error = function(e)
+    {
+        console.log("[broker] error for: " + this.subject);
+        this.cache.error(e);
+    };
+
+    Channel.prototype.complete = function()
+    {
+        // ignore, we never complete
+    };
+
+
     (function(app, Rx)
     {
         var store = {};
-
-        // get an observable for a specific subject
-        // optionally set a new supplier function (must return an observable)
-        var broker = function(subject, supplier, onlyIfEmpty)
-        {
-            subject = normalizeSubject(subject);
-
-            var channel = store[subject];
-            if (!channel)
-            {
-                channel = createChannel(subject, function()
-                {
-                    // un-register from store after last subscriber disconnected
-                    delete store[subject];
-                });
-
-                store[subject] = channel;
-            }
-
-            if (supplier && (!onlyIfEmpty || channel.supplier === undefined))
-            {
-                channel.supplier = (app.isFunction(supplier)) ? supplier : function() { return Rx.Observable.of(supplier); };
-            }
-
-            return channel.observable;
-        };
-
 
         // normalizes subject (array to string)
         var normalizeSubject = function(subject)
@@ -66,104 +131,44 @@ function()
             return subject;
         };
 
-
-        // create a channel (an observer that never completes and has a ReplaySubject attached to it)
-        var createChannel = function(subject, onDereference)
+        // Get an observable for a specific subject.
+        // Optionally set a new supplier function (must return an observable).
+        // If isEvent is defined, the channel won't cache values (behave like Subject, not ReplaySubject(1)).
+        var broker = function(subject, supplier, isEvent)
         {
-            return function(onDereference)
+            subject = normalizeSubject(subject);
+
+            var channel = store[subject];
+            if (!channel)
             {
-                var onDereference = onDereference;
-                var observer = this;
-                var _supplier = undefined;
-                var subscription = undefined;
-                var cache = new Rx.ReplaySubject(1);
-
-                // destructor (called after the last subscriber disconnected)
-                var destructor = function()
+                // create a channel (an observer that never completes and has a ReplaySubject attached to it)
+                channel = new Channel(subject, isEvent, function()
                 {
-                    console.log("[broker] destroying: " + subject);
-
-                    if (subscription)
-                    {
-                        subscription.unsubscribe();
-                    }
-
-                    if (onDereference)
-                    {
-                        onDereference();
-                    }
-                };
-
-                var channel = {};  // the observer
-
-                // output observable with added method pull()
-                var observable = cache.asObservable().finally(destructor).publishReplay(1).refCount();
-                Object.defineProperty(observable, "pull", { value: function()
-                {
-                    // un-subscribe from previous source
-                    if (subscription)
-                    {
-                        subscription.unsubscribe();
-                    }
-
-                    var newValue = (_supplier) ? _supplier() : Rx.Observable.empty();
-                    subscription = newValue.subscribe(channel);
-                    if (newValue.pull)
-                    {
-                        // allow broker subject to connect to broker subject
-                        newValue.pull();
-                    }
-
-                    return observable;
-                }});
-
-                Object.defineProperty(channel, "observable", { get: function() { return observable; } });
-
-                Object.defineProperty(channel, "supplier", {
-                    set: function(newSupplier)
-                    {
-                        if ((typeof newSupplier) === 'function')
-                        {
-                            _supplier = newSupplier;
-                        }
-                        else
-                        {
-                            console.warn("[broker] ignored supplier for " + subject + " that is not a function: ", newSupplier);
-                            console.trace();
-                        }
-                    },
-                    get: function()
-                    {
-                        return _supplier;
-                    }
+                    // un-register from store after last subscriber disconnected
+                    delete store[subject];
                 });
 
-                Object.defineProperty(channel, "next", { value: function(value) { cache.next(value); }});
+                store[subject] = channel;
+            }
 
-                Object.defineProperty(channel, "error", { value: function(e)
-                {
-                    console.log("[broker] encountered error for: " + subject);
-                    cache.error(e);
-                }});
+            if (supplier !== undefined && supplier !== null)
+            {
+                channel.setSupplier((app.isFunction(supplier)) ? supplier : function() { return Rx.Observable.of(supplier); });
+            }
 
-                Object.defineProperty(channel, "complete", { value: function()
-                {
-                    // ignore, we never complete
-                }});
-
-                return channel;
-
-            }(onDereference);
+            return channel.asObservable();
         };
+
 
         // publish
         Object.defineProperty(app, "broker", { value: broker });
+        Object.defineProperty(app, "brokerEvent", { value: function(subject, supplier)
+        {
+            return broker(subject, supplier, true);
+        }});
 
         // broker subject id constants
         Object.defineProperty(app, "subject", { value: {} });
-
-        // sub-protocol splitter registry
-        Object.defineProperty(app, "splitters", { value: [] });
 
     })(window.app, window.Rx);
 });

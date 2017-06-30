@@ -26,22 +26,25 @@
                     {
                         // handle credential input
                         app.eachSubmit(that.parent)
-                            .map(function(e)
+                            .takeUntil(app.navigate())
+                            .map(function (e)
                             {
                                 var name = that.profileFormName.value;
                                 var password = that.profileFormPassword.value;
 
-                                return { "credentials": { "name": name, "password": password }, "token": "" };
+                                return {credentials: {name: name, password: password}, token: ""};
                             })
                             .subscribe(app.ws);
 
-                        // handle token values
+                        // hide sign-in form if we already have a token
                         app.broker(app.subject.TOKEN)
+                            .takeUntil(app.navigate())
                             .subscribe(function(token)
-                        {
-                            app.hide(that.parent, !!token);
-                        });
+                            {
+                                app.hide(that.parent, !!token);
+                            });
                     });
+                    //# sourceURL=profile.fragment.html#1
                     </script>
                 </form>
                 <div id="profileInfo" hidden="">
@@ -50,100 +53,141 @@
                     <script>
                     app(function(that, app)
                     {
-                        // handle click
+                        // handle sign-out click
                         app.eachClick(that.profileSignout)
-                            .map(function(e)
+                            .takeUntil(app.navigate())
+                            .flatMap(function(e) { return app.broker(app.subject.TOKEN).take(1); })
+                            .map(function(token)
                             {
-                                return { "credentials": {} };
+                                return { credentials: {}, token: null };
                             })
-                            .subscribe(app.ws);
+                            .subscribe(function(signoutMessage)
+                            {
+                                app.ws(signoutMessage);
+                                app.navigate("signin.html");
+                            });
 
                         // handle token values
                         app.broker(app.subject.TOKEN)
+                            .takeUntil(app.navigate())
                             .subscribe(function(token)
                             {
-                                console.log("hiding logout button");
                                 app.hide(that.parent, !token);
                             });
 
                         // handle login name changes
                         app.broker(app.subject.CREDENTIALS)
+                            .takeUntil(app.navigate())
                             .subscribe(function(credentials)
                             {
                                 that.profileName.textContent = (credentials && credentials.name) ? credentials.name : "";
                             });
                     });
+                    //# sourceURL=profile.fragment.html#2
                     </script>
                 </div>
             </div>
         </div>
     </div>
     <script>
-        app(function(that, app)
+    app(function(that, app)
+    {
+        // update profile fragment UI state
+        app.broker(app.subject.TOKEN)
+            .takeUntil(app.navigate())
+            .subscribe(function(token)
+            {
+                // persist token
+                if (token)
+                    app.set(app.subject.TOKEN, token);
+                else
+                    app.remove(app.subject.TOKEN);
+
+                // update profile glyph
+                that.profileGlyph.src = (token) ? "../pic/admin-user.svg" : "../pic/user.svg";
+            });
+    });
+
+    app.once(function(that, app)
+    {
+        const ATTEMPTED_ROUTE = "ATTEMPTED_ROUTE";
+
+        // if someone navigates to the sign-in page manually (or refreshes there) redirect to "/" after sign-in
+        app.set(ATTEMPTED_ROUTE, "/");
+
+        var isRouteSignin = function(route)
         {
-            // initialize TOKEN from localStorage
-            app.broker(app.subject.TOKEN, function()
+            return route.strippedPath === "/signin.html" || route.strippedPath === "signin.html";
+        };
+
+        // reset token on UNAUTHORIZED error
+        app.brokerEvent(app.subject.ERROR)
+            .filter(function(error) { return "UNAUTHORIZED" === error; })
+            .flatMap(function(error)
+            {
+                return app.broker(app.subject.ROUTE)
+                    .take(1)
+                    .map(function(route) { return { route: route, error: error }; });
+            })
+            .subscribe(function(routeAndError)
+            {
+                console.log("[profile-fragment] UNAUTHORIZED: ", routeAndError);
+
+                if (!isRouteSignin(routeAndError.route))
                 {
-                    var initialToken = "";
-                    if (app.storageAvailable("localStorage"))
+                    app.set(ATTEMPTED_ROUTE, routeAndError.route.canonicalPathWithArgs);
+                    app.navigate("signin.html");
+                }
+            });
+
+        // on route change attempts, if token is empty, redirect to sign-in page
+        app.brokerEvent(app.subject.NEXT_ROUTE)
+            .filter(function(route) { return !isRouteSignin(route); })
+            .flatMap(function(route) { return app.broker(app.subject.TOKEN).take(1).map(function(token) { return { route: route, token: token }}); })
+            .filter(function(routeAndToken) { return !routeAndToken.token; })
+            .do(function(routeAndToken) {
+                // persist this routing attempt (for continuing after successful sign-in
+                app.set(ATTEMPTED_ROUTE, routeAndToken.route.canonicalPathWithArgs);
+            })
+            .subscribe(function(routeAndToken)
+            {
+                console.log("[profile-fragment] cancel routing to " + routeAndToken.route.strippedPath + ", redirecting to sign-in page");
+                routeAndToken.route.subscription.unsubscribe();
+                app.navigate("signin.html");
+            });
+
+        // if we were on the signin page and received a token, navigate back to index (improve this)
+        app.broker(app.subject.TOKEN)
+            .filter(function(token) { return !!token; })
+            .flatMap(function(token)
+            {
+                return app.broker(app.subject.ROUTE).take(1);
+            })
+            .subscribe(function(route)
+            {
+                console.log("[profile-fragment] signed in");
+                var attemptedRoute = app.get(ATTEMPTED_ROUTE);
+                if (attemptedRoute)
+                {
+                    app.remove(ATTEMPTED_ROUTE);
+                    if (attemptedRoute !== route.strippedPath)
                     {
-                        initialToken = window.localStorage.getItem(app.subject.TOKEN);
-                        if (!initialToken)
-                        {
-                            initialToken = "";
-                        }
-                        initialToken = "";
+                        console.log("[profile-fragment] trying to reach attempted route: " + attemptedRoute);
+                        app.navigate(attemptedRoute);
                     }
-                    return Rx.Observable.of(initialToken);
-                }, true)
-                .pull()
-                // update profile fragment UI state
-                .do(function(token)
-                {
-                    // persist token
-                    if (app.storageAvailable("localStorage"))
-                    {
-                        if (token)
-                            window.localStorage.setItem(app.subject.TOKEN, token);
-                        else
-                            window.localStorage.removeItem(app.subject.TOKEN);
-                    }
+                }
+            });
 
-                    // update profile glyph
-                    that.profileGlyph.src = (token) ? "../pic/admin-user.svg" : "../pic/user.svg";
-                })
-                // on token changes, if token is empty, redirect to index if not already there
-                .filter(function(token) { return !token; })
-                .flatMap(function(token) { return app.broker(app.subject.NEXT_ROUTE); })
-                .take(1)
-                .filter(function(route) { return route.strippedPath !== "/signin.html" && route.strippedPath !== "signin.html"; })
-                .subscribe(function(route)
-                {
-                    console.log("[profile-fragment] cancel routing to " + route.strippedPath + ", please sign in first");
-                    route.subscription.unsubscribe();
-                    app.navigate("/signin.html");
-                });
+        // initialize TOKEN from localStorage and immediately try to renew it
+        // If we got a token, we try to refresh it right away.
+        // This is how we acquire the user name associated with the token.
+        // In case token is undefined/null we will just get an UNAUTHORIZED error.
+        app.broker(app.subject.WEBSOCKET_OPEN)
+            .take(1)
+            .map(function() { return { "credentials": {}, "token": app.get(app.subject.TOKEN) }; })
+            .subscribe(app.ws);
+    });
 
-            // if we were on the signin page and received a token, navigate back to index (improve this)
-            app.broker(app.subject.TOKEN)
-                .filter(function(token) { return !!token; })
-                .flatMap(function(token) { return app.broker(app.subject.ROUTE); })
-                .take(1)
-                .filter(function(route) { return route.strippedPath === "/signin.html" || route.strippedPath === "signin.html"; })
-                .subscribe(function(route)
-                {
-                    console.log("[profile-fragment] signed in");
-                    app.navigate("/");
-                });
-
-            // reset token on UNAUTHORIZED error
-            app.broker(app.subject.ERROR)
-                //.filter(function(error) { return "UNAUTHORIZED" === error; })
-                .subscribe(function(unauthorized)
-                {
-                    console.log("error: ", unauthorized);
-                    app.broker(app.subject.TOKEN, function() { return Rx.Observable.of(""); });
-                });
-        });
-        </script>
+    //# sourceURL=profile.fragment.html#3
+    </script>
 </div>

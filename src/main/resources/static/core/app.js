@@ -24,16 +24,25 @@
     // start by loading external libraries and then our application
     if (!window.app)
     {
-        // publish app main function
-        // calling it schedules a function to run after the app has been mounted
-        // the functions "this" will be pointing to the app instance
-        // the DOM element that is parent to the calling <script> element will be passed as second argument
-        Object.defineProperty(window, "app", { value: function(fn)
+        const APP_ONCE_ATTRIBUTE_NAME = "data-app-scheduled";
+
+        // Publish app main function.
+        // Calling it schedules a function to run after the app has been mounted.
+        // The functions "this" will be pointing to the app instance.
+        // The DOM element that is parent to the calling <script> element will be passed as second argument
+        Object.defineProperty(window, "app", { value: function(fn, onlyOnce)
         {
             var script = document.currentScript;
 
-            // bind ourselves to the callback
-            Object.defineProperty(fn, "app", { value: this });
+            if (script && onlyOnce)
+            {
+                if (script.hasAttribute(APP_ONCE_ATTRIBUTE_NAME))
+                {
+                    return;
+                }
+
+                script.setAttribute(APP_ONCE_ATTRIBUTE_NAME, "");
+            }
 
             // bind all local elements by id
             Object.defineProperty(fn, "parent", { value: (script && script.parentNode) ? script.parentNode : undefined});
@@ -55,6 +64,9 @@
             }
         }});
         var app = window.app;
+
+        // Same as app() but execute only once (does nothing on script reload).
+        Object.defineProperty(app, "once", { value: function(fn) { return app(fn, true); } });
 
         // set app root URL to the parent of this scripts directory
         Object.defineProperty(app, "baseUrl", { value:
@@ -81,12 +93,10 @@
             // notify waiters
             script.onload = function()
             {
-                var callbacks = requireStore[url];
-
-                var cb = undefined;
-                while((cb = callbacks.pop()))
+                var subRequests = requireStore[url];
+                while(subRequests.length > 0)
                 {
-                    cb();
+                    subRequests.pop()();
                 }
             };
 
@@ -141,90 +151,115 @@
         };
 
 
+        var requireFinishCompleted = function()
+        {
+            // finish all completed requests and pop them from the dependency stack
+            for (var i = requireStack.length - 1; i >= 0 && requireStack[i].onComplete !== undefined; --i)
+            {
+                // last request left or already marked as done?
+                requireStack.pop().onComplete();
+            }
+        };
+
+
+        var requireMarkPathLoaded = function(pathsToLoad, loadedIndex)
+        {
+            pathsToLoad[loadedIndex] = undefined;
+            var iUnloaded = 0;
+            var pathsLength = pathsToLoad.length;
+            while(iUnloaded < pathsLength && pathsToLoad[iUnloaded] === undefined)
+            {
+                ++iUnloaded;
+            }
+
+            return (iUnloaded === pathsLength);
+        };
+
+
+        var requirePushRequest = function(pathsToLoad, request)
+        {
+            // push new request on stack and make sure callbacks of dependencies get called first
+            var stackLength = requireStack.length;
+            for (var i = 0; i < stackLength; ++i)
+            {
+                if (pathsToLoad.indexOf(requireStack[i].requester.pathname) >= 0)
+                {
+                    // insert this request below all possible dependencies
+                    for (var j = stackLength; j > i; --j)
+                    {
+                        requireStack[j] = requireStack[j - 1];
+                    }
+                    requireStack[i] = request;
+                    return;
+                }
+            }
+
+            requireStack.push(request);
+        };
+
+
+        var canonicalizeAllPaths = function(paths)
+        {
+            var canonicalPaths = [];
+            canonicalPaths.length = paths.length;
+            for (var i = 0; i < paths.length; ++i)
+            {
+                canonicalPaths[i] = canonicalizePath(paths[i]);
+            }
+            return canonicalPaths;
+        };
+
+
         // Load scripts at the specified paths and execute callback after all have been loaded.
         var require = function(paths, onComplete)
         {
             paths = (paths.constructor === Array) ? paths : ((paths) ? [paths] : []);
-
-            var requester = (document.currentScript) ? new URL(document.currentScript.src) : "<anonymous>";
-            var request = { done: false, "onComplete": onComplete, "requester": requester };
-            var pathsToLoad = paths.map(canonicalizePath);
-
-            var considerComplete = function(loadedPath)
+            if (!onComplete)
             {
-                for (var i = 0; i < pathsToLoad.length; ++i)
-                {
-                    if (pathsToLoad[i] === loadedPath)
-                    {
-                        pathsToLoad[i] = undefined;
-                    }
-                }
+                onComplete = function() {};
+            }
 
-                // nothing else to load? done.
-                if (!pathsToLoad.some(function(path) { return (!!path); }))
-                {
-                    // mark this request as done
-                    request.done = true;
-
-                    // finish all completed requests and pop them from the dependency stack
-                    for (var i = requireStack.length - 1; i >= 0; --i)
-                    {
-                        // last request left or already marked as done?
-                        if (requireStack[i].done)
-                        {
-                            var otherRequest = requireStack.pop();
-                            if (otherRequest.onComplete)
-                            {
-                                otherRequest.onComplete();
-                            }
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                }
-            };
-
+            var pathsToLoad = canonicalizeAllPaths(paths);
             if (pathsToLoad.length === 0)
             {
-                if (onComplete)
-                {
-                    onComplete();
-                }
+                onComplete();
                 return;
             }
 
-            // push new request on stack and make sure callbacks of all scripts required by this request get called first
-            requireStack.push(request);
-            var stackLength = requireStack.length;
-            for (var i = stackLength - 2; i >= 0; --i)
-            {
-                var frame = requireStack[i];
-                if (pathsToLoad.indexOf(frame.requester.pathname) >= 0)
-                {
-                    // put this frame on top of the stack, shift all higher frames down
-                    for (var j = i + 1; j < stackLength; ++j)
-                    {
-                        requireStack[j - 1] = requireStack[j];
-                    }
-                    requireStack[j - 1] = frame;
-                }
-            }
+            var requester = (document.currentScript) ? new URL(document.currentScript.src) : "<anonymous>";
+            var request = { onComplete: undefined, requester: requester };
 
-            pathsToLoad.forEach(function(path)
+            // push new request on stack and make sure callbacks of all scripts required by this request get called first
+            requirePushRequest(pathsToLoad, request);
+
+            var requireConsiderComplete = function(loadedIndex)
             {
-                var isRequested = Object.prototype.hasOwnProperty.call(requireStore, path);
-                if (isRequested && requireStore[path].length == 0)
+                if (requireMarkPathLoaded(pathsToLoad, loadedIndex))
                 {
-                    considerComplete(path);
+                    // mark this request as done
+                    request.onComplete = onComplete;
+                }
+
+                requireFinishCompleted();
+            };
+
+            for (var i = 0; i < pathsToLoad.length; ++i)
+            {
+                var path = pathsToLoad[i];
+                var isRequested = Object.prototype.hasOwnProperty.call(requireStore, path);
+                if (isRequested && requireStore[path].length === 0)
+                {
+                    requireConsiderComplete(i);
                 }
                 else
                 {
-                    var onLoad = function()
+                    var onLoad = (function(loadedIndex)
                     {
-                        considerComplete(path);
-                    };
+                        return function()
+                        {
+                            requireConsiderComplete(loadedIndex);
+                        };
+                    })(i);
 
                     if (isRequested)
                     {
@@ -236,7 +271,7 @@
                         loadViaTag(path);
                     }
                 }
-            });
+            }
         };
 
 

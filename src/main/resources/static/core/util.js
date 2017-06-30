@@ -52,6 +52,41 @@ function()
         }});
 
 
+        // simple storage abstraction (ignores quotas)
+        var haveLocalStorage = app.storageAvailable("localStorage");
+        if (haveLocalStorage || app.storageAvailable("sessionStorage"))
+        {
+            var storage = haveLocalStorage ? window.localStorage : window.sessionStorage;
+            Object.defineProperty(app, "set", { value: function(key, value) { storage.setItem(key, value); }});
+            Object.defineProperty(app, "get", { value: function(key) { return storage.getItem(key); }});
+            Object.defineProperty(app, "remove", { value: function(key) { storage.removeItem(key); }});
+        }
+        else
+        {
+            var storage = {};
+            Object.defineProperty(app, "set", { value: function(key, value)
+            {
+                storage[key] = value;
+            }});
+            Object.defineProperty(app, "get", { value: function(key)
+            {
+                if (Object.prototype.hasOwnProperty.call(storage, key))
+                {
+                    return storage[key];
+                }
+
+                return undefined;
+            }});
+            Object.defineProperty(app, "remove", { value: function(key)
+            {
+                if (Object.prototype.hasOwnProperty.call(fallbackStorage, key))
+                {
+                    delete fallbackStorage[key];
+                }
+            }});
+        }
+
+
         Object.defineProperty(app, "hide", { value: function(element, isHidden)
         {
             if (isHidden)

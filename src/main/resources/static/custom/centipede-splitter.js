@@ -17,7 +17,10 @@
 "use strict";
 
 // Centipede splitter
-app.require("core/broker.js",
+app.require([
+    "core/ws.js",
+    "core/broker.js"
+],
 function()
 {
     console.log("[centipede-splitter] init");
@@ -59,11 +62,11 @@ function()
                 }
                 if (message.error != null)
                 {
-                    parts.push([ERROR, message.error]);
+                    parts.push([ERROR, message.error, true]);
                 }
                 if (message.overflow != null)
                 {
-                    parts.push([OVERFLOW, true]);
+                    parts.push([OVERFLOW, true, true]);
                 }
             }
 

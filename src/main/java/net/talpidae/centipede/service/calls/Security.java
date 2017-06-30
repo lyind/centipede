@@ -147,7 +147,7 @@ public class Security implements CallHandler
 
                 eventBus.post(new SignOutEvent(securityContext.getUserPrincipal().getName()));
 
-                return null;
+                throw new AuthenticationException("UNAUTHORIZED");
             }
         }
 
