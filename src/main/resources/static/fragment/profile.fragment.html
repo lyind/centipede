@@ -64,7 +64,6 @@
                             .subscribe(function(signoutMessage)
                             {
                                 app.ws(signoutMessage);
-                                app.navigate("signin.html");
                             });
 
                         // handle token values
@@ -131,7 +130,7 @@
             })
             .subscribe(function(routeAndError)
             {
-                console.log("[profile-fragment] UNAUTHORIZED: ", routeAndError);
+                console.log("[profile-fragment] UNAUTHORIZED");
 
                 if (!isRouteSignin(routeAndError.route))
                 {
