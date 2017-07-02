@@ -114,29 +114,28 @@ function()
                 var id = sourceNode.attributes.id.value;
                 if (id)
                 {
+                    var isFromStore = (sourceNode.ownerDocument === keepStore);
                     var template = targetDocument.getElementById(id);
                     if (template)
                     {
                         // replace template with the "keep" annotated thing
                         var node = targetDocument.importNode(sourceNode, true);
                         template.parentNode.replaceChild(node, template);
-                        sourceNodeParent.removeChild(sourceNode);
-
-                        node.setAttribute("initialized", "");
+                    }
+                    else if (!isFromStore)
+                    {
+                        // stash in store
+                        var node = keepStore.importNode(sourceNode, true);
+                        keepStore.documentElement.appendChild(node);
                     }
                     else
                     {
-                        if (sourceNode.ownerDocument === keepStore)
-                        {
-                            // nothing to do
-                            continue;
-                        }
-
                         // keep stashed away in store
-                        var node = keepStore.importNode(sourceNode, true);
-                        keepStore.documentElement.appendChild(node);
-                        sourceNodeParent.removeChild(sourceNode);
+                        continue;
                     }
+
+                    if (isFromStore)
+                        sourceNodeParent.removeChild(sourceNode);
 
                     console.log("[ui] keepable restored: " + id);
                 }
