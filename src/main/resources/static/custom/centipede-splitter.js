@@ -50,7 +50,22 @@ function()
                 message = JSON.parse(message);
                 if (message.services != null)
                 {
-                    parts.push([SERVICES, message.services]);
+                    var serviceIds = [];
+                    var serviceCount = message.services.length;
+
+                    // publish list of service IDs
+                    serviceIds.length = serviceCount;
+                    for (var i = 0; i < serviceCount; ++i)
+                    {
+                        serviceIds[i] = message.services[i].name;
+                    }
+                    parts.push([SERVICES, serviceIds]);
+
+                    // publish service details
+                    for (var i = 0; i < serviceCount; ++i)
+                    {
+                        parts.push([[SERVICES, message.services[i].name], message.services[i]]);
+                    }
                 }
                 if (message.token != null)
                 {

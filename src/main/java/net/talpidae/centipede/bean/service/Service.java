@@ -33,7 +33,7 @@ import java.time.OffsetDateTime;
 public class Service
 {
     /**
-     * This service instances generation (increased whenever something changed).
+     * This service instances generation (increased whenever some property changes).
      */
     private final int generation;
 

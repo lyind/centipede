@@ -1,24 +1,32 @@
 <!DOCTYPE html>
 <meta charset="utf-8"/>
-<link rel="stylesheet" href="core/app.css">
+<link rel="stylesheet" href="../core/app.css">
 <title>Centipede - Edit Service</title>
-<script src="/core/app.js"></script>
+<script src="../core/app.js"></script>
 <div id="profile.fragment" data-keep="fragment/profile.fragment.html"></div>
 <div>
+    <h2 id="headerConfigure">Configure </h2>
     <p>Ready (would show service details here)</p>
-    <br />
+    <br/>
     <a id="serviceEditBack" href="..">Back</a>
     <script>
-    console.log("[service-edit] init");
-    app(function(that, app)
-    {
-        app.eachClick(that.serviceEditBack).subscribe(function(e)
+        console.log("[service-edit] init");
+        app(function (that, app)
         {
-            app.navigate(e.target.getAttribute('href'));
+            app.activeRoute
+                .subscribe(function (route)
+                {
+                    console.log("[service-edit] activeRoute: ", route);
+                    that.headerConfigure.innerText = that.headerConfigure.innerText + " " + route.args[0];
+                });
 
-            e.stopPropagation();
-            e.preventDefault();
+            app.eachClick(that.serviceEditBack).subscribe(function (e)
+            {
+                app.navigate(e.target.getAttribute('href'));
+
+                e.stopPropagation();
+                e.preventDefault();
+            });
         });
-    });
     </script>
 </div>

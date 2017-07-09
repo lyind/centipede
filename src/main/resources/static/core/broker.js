@@ -49,6 +49,7 @@ function()
                 if (thisChannel.subscription)
                 {
                     thisChannel.subscription.unsubscribe();
+                    thisChannel.subscription = undefined;
                 }
 
                 if (thisChannel.onDereference)
@@ -106,7 +107,7 @@ function()
 
     Channel.prototype.error = function(e)
     {
-        console.log("[broker] error for: " + this.subject);
+        console.log("[broker] error on subject: " + this.subject + ": ", e);
         this.cache.error(e);
     };
 

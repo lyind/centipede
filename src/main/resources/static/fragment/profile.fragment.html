@@ -39,6 +39,7 @@
                         // hide sign-in form if we already have a token
                         app.broker(app.subject.TOKEN)
                             .takeUntil(app.navigate())
+                            .distinctUntilChanged()
                             .subscribe(function(token)
                             {
                                 app.hide(that.parent, !!token);
@@ -69,6 +70,7 @@
                         // handle token values
                         app.broker(app.subject.TOKEN)
                             .takeUntil(app.navigate())
+                            .distinctUntilChanged()
                             .subscribe(function(token)
                             {
                                 app.hide(that.parent, !token);
@@ -94,6 +96,7 @@
         // update profile fragment UI state
         app.broker(app.subject.TOKEN)
             .takeUntil(app.navigate())
+            .distinctUntilChanged()
             .subscribe(function(token)
             {
                 // persist token
@@ -157,6 +160,7 @@
 
         // if we were on the signin page and received a token, navigate back to index (improve this)
         app.broker(app.subject.TOKEN)
+            .distinctUntilChanged()
             .filter(function(token) { return !!token; })
             .flatMap(function(token)
             {
@@ -182,7 +186,7 @@
         // This is how we acquire the user name associated with the token.
         // In case token is undefined/null we will just get an UNAUTHORIZED error.
         app.broker(app.subject.WEBSOCKET_OPEN)
-            .take(1)
+            .distinctUntilChanged()
             .map(function() { return { "credentials": {}, "token": app.get(app.subject.TOKEN) }; })
             .subscribe(app.ws);
     });

@@ -128,5 +128,6 @@ function()
             return Rx.Observable.fromEvent(element, "submit").do(stopEventPropagation);
         }});
 
+
     })(window.app, window);
 });

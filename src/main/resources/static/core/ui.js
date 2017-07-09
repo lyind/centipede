@@ -18,358 +18,388 @@
 
 // UI helper
 app.require([
-    "lib/Rx.js",
-    "core/broker.js",
-    "core/http.js"
-],
-function()
-{
-    console.log("[ui] init");
-
-    (function(app, document, Rx, broker, brokerEvent)
+        "lib/Rx.js",
+        "core/broker.js",
+        "core/http.js",
+        "polyfill/polyfill.js"
+    ],
+    function ()
     {
-        const LEAVE_ROUTE = "LEAVE_ROUTE";
-        const NEXT_ROUTE = "NEXT_ROUTE";
-        const ROUTE = "ROUTE";
+        console.log("[ui] init");
 
-        var html5doctype = document.implementation.createDocumentType( 'html', '', '');
-        var keepStore = document.implementation.createDocument('', 'html', html5doctype);
-        var encounteredScriptUrls = {};
-
-        // ensure these subjects are kept available
-        brokerEvent(LEAVE_ROUTE).subscribe();
-        brokerEvent(NEXT_ROUTE).subscribe();
-        broker(ROUTE).subscribe();
-
-        // request a full DOM document
-        var getDocument = function(canonicalPath)
+        (function (app, document, Rx, broker, brokerEvent)
         {
-            return app.GET(canonicalPath, "document", {});
-        };
+            const LEAVE_ROUTE = "LEAVE_ROUTE";
+            const NEXT_ROUTE = "NEXT_ROUTE";
+            const ROUTE = "ROUTE";
 
+            var html5doctype = document.implementation.createDocumentType('html', '', '');
+            var keepStore = document.implementation.createDocument('', 'html', html5doctype);
+            var encounteredScriptUrls = {};
 
-        // request a DOM document and return it's body as a document fragment of the current document
-        var getFragment = function(targetDocument, canonicalPath)
-        {
-            return getDocument(canonicalPath).map(function(doc)
+            // ensure these subjects are kept available
+            brokerEvent(LEAVE_ROUTE).subscribe();
+            brokerEvent(NEXT_ROUTE).subscribe();
+            broker(ROUTE).subscribe();
+
+            // request a full DOM document
+            var getDocument = function (canonicalPath)
             {
-                var fragment = targetDocument.createDocumentFragment();
-                var children = doc.body.childNodes;
-                var length = children.length;
+                return app.GET(canonicalPath, "document", {});
+            };
+
+            // request a DOM document and return it's body as a document fragment of the current document
+            var getFragment = function (targetDocument, canonicalPath)
+            {
+                return getDocument(canonicalPath).map(function (doc)
+                {
+                    var fragment = targetDocument.createDocumentFragment();
+                    var children = doc.body.childNodes;
+                    var length = children.length;
+                    for (var i = 0; i < length; ++i)
+                    {
+                        var fragmentNode = targetDocument.importNode(children[i], true);
+                        fragment.appendChild(fragmentNode);
+                    }
+
+                    return fragment;
+                });
+            };
+
+            var forceScriptExecution = function (targetDocument, scriptNodes)
+            {
+                var length = scriptNodes.length;
                 for (var i = 0; i < length; ++i)
                 {
-                    var fragmentNode = targetDocument.importNode(children[i], true);
-                    fragment.appendChild(fragmentNode);
-                }
+                    var script = scriptNodes[i];
+                    var parent = script.parentNode;
 
-                return fragment;
-            });
-        };
+                    var newScript = targetDocument.createElement("script");
 
-
-        var forceScriptExecution = function(targetDocument, scriptNodes)
-        {
-            var length = scriptNodes.length;
-            for (var i = 0; i < length; ++i)
-            {
-                var script = scriptNodes[i];
-                var parent = script.parentNode;
-
-                var newScript = targetDocument.createElement("script");
-
-                // copy attributes
-                for (var j = 0; j < script.attributes.length; ++j)
-                {
-                    var attribute = script.attributes[j];
-                    newScript.setAttribute(attribute.name, attribute.value);
-                }
-
-                newScript.appendChild(targetDocument.createTextNode(script.innerHTML));
-
-                parent.replaceChild(newScript, script);
-            }
-        };
-
-
-        var placeKeepAnnotated = function(sourceDocument, targetDocument)
-        {
-            var nodesToKeep = [];
-            var nodesToKeepFromCurrent = sourceDocument.querySelectorAll('[data-keep=""]');
-            for (var i = 0; i < nodesToKeepFromCurrent.length; ++i)
-            {
-                nodesToKeep.push(nodesToKeepFromCurrent[i]);
-            }
-            var nodesToKeepFromStore = keepStore.querySelectorAll("[data-keep]");
-            for (var i = 0; i < nodesToKeepFromStore.length; ++i)
-            {
-                nodesToKeep.push(nodesToKeepFromStore[i]);
-            }
-
-            // put all nodes back where they belong
-            // in case someone doesn't like them in the new document they are still there but not linked
-            for (var i = 0; i < nodesToKeep.length; ++i)
-            {
-                var sourceNode = nodesToKeep[i];
-                var sourceNodeParent = sourceNode.parentNode;
-                var id = sourceNode.attributes.id.value;
-                if (id)
-                {
-                    var isFromStore = (sourceNode.ownerDocument === keepStore);
-                    var template = targetDocument.getElementById(id);
-                    if (template)
+                    // copy attributes
+                    for (var j = 0; j < script.attributes.length; ++j)
                     {
-                        // replace template with the "keep" annotated thing
-                        var node = targetDocument.importNode(sourceNode, true);
-                        template.parentNode.replaceChild(node, template);
-                    }
-                    else if (!isFromStore)
-                    {
-                        // stash in store
-                        var node = keepStore.importNode(sourceNode, true);
-                        keepStore.documentElement.appendChild(node);
-                    }
-                    else
-                    {
-                        // keep stashed away in store
-                        continue;
+                        var attribute = script.attributes[j];
+                        newScript.setAttribute(attribute.name, attribute.value);
                     }
 
-                    if (isFromStore)
-                        sourceNodeParent.removeChild(sourceNode);
+                    newScript.appendChild(targetDocument.createTextNode(script.innerHTML));
 
-                    console.log("[ui] keepable restored: " + id);
+                    parent.replaceChild(newScript, script);
                 }
-                else
-                {
-                    console.error("[ui] element with attr. data-keep but no id: ", sourceNode.nodeName);
-                }
-            }
+            };
 
-            var newKeepables = targetDocument.querySelectorAll('[data-keep]:not([data-keep=""])');
-            for (var i = 0; i < newKeepables.length; ++i)
+            var initializeKeepable = function (targetDocument, keepableNode)
             {
-                var keepableNode = newKeepables[i];
                 var src = keepableNode.getAttribute("data-keep");
                 if (src)
                 {
                     if (src.endsWith(".js"))
                     {
                         // script only fragment requested
-                        app.require(src, function() { keepableNode.setAttribute("data-keep", ""); });
+                        app.require(src, function ()
+                        {
+                            keepableNode.setAttribute("data-keep", "");
+                        });
                     }
                     else
                     {
                         // HTML fragment requested
-                        getFragment(targetDocument, app.canonicalizePath(src)).subscribe(function(fragment)
+                        getFragment(targetDocument, app.canonicalizePath(src)).subscribe(function (fragment)
                         {
                             keepableNode.appendChild(fragment);
-                            forceScriptExecution(targetDocument, Array.prototype.map.call(keepableNode.getElementsByTagName("script"), function(node) { return node; }));
+                            forceScriptExecution(targetDocument, Array.prototype.map.call(keepableNode.getElementsByTagName("script"), function (node)
+                            {
+                                return node;
+                            }));
 
                             keepableNode.setAttribute("data-keep", "");  // flag as rendered
-                        })
+                        });
                     }
                 }
-            }
-        };
+            };
 
-
-        var sliceAtIndexOf = function(subject, separator)
-        {
-            var i = subject.indexOf(separator);
-            if (i >= 0)
+            var initializeNewKeepables = function (targetDocument)
             {
-                return [subject.slice(0, i), subject.slice(i)];
-            }
-            return [subject, ""];
-        };
-
-
-        var splitPath = function(pathHashAndQuery)
-        {
-            var url = { path: "", hash: "", query: ""};
-            var parts = [pathHashAndQuery, ""];
-
-            parts = sliceAtIndexOf(parts[0], '?');
-            url.query = parts[1];
-
-            parts = sliceAtIndexOf(parts[0], '#');
-            url.hash = parts[1];
-            url.path = parts[0];
-
-            return url;
-        };
-
-
-        var splitRoute = function(canonicalPathWithArgs)
-        {
-            var route = { routes: [], strippedPath: "", subscription: undefined, canonicalPathWithArgs: canonicalPathWithArgs };
-
-            var path = [];
-            var args = [];
-            var segments = canonicalPathWithArgs.split("/");
-            for (var i = 0; i < segments.length; ++i)
-            {
-                var s = segments[i];
-                if (s.startsWith(":"))
+                var newKeepables = targetDocument.querySelectorAll('[data-keep]:not([data-keep=""])');
+                for (var i = 0; i < newKeepables.length; ++i)
                 {
-                    args.push(s.slice(1));
+                    initializeKeepable(targetDocument, newKeepables[i]);
                 }
-                else
-                {
-                    path.push(s);
-                    route.routes.push({ "path": path.join("/"), "args": args});
-                    args = [];
-                }
-            }
+            };
 
-            route.strippedPath = path.join("/");
-
-            return route;
-        };
-
-
-        var navigateOnPopState = function(e)
-        {
-            // navigate to the "current" page
-            var loc = window.location;
-            app.navigate(loc.pathname + loc.hash + loc.search);
-        };
-
-
-        var navigateRelative = function(relativePath)
-        {
-            var parts = splitPath(relativePath);
-            var canonicalPathWithArgs = app.canonicalizePath(parts.path);
-            var route = splitRoute(canonicalPathWithArgs);
-
-            // copy reference to avoid some firefox bug
-            var currentDocument = document;
-            route.subscription = getDocument(route.strippedPath).subscribe(function(newDocument)
+            var placeKeepAnnotated = function (sourceDocument, targetDocument)
             {
-                try
+                var nodesToKeep = [];
+                var nodesToKeepFromCurrent = sourceDocument.querySelectorAll('[data-keep=""]');
+                for (var i = 0; i < nodesToKeepFromCurrent.length; ++i)
                 {
-                    // notify subscribers about next route (subscribers may cancel the routing attempt using "subscription"
-                    brokerEvent(app.subject.LEAVE_ROUTE, function() { return Rx.Observable.of(route); }).pull();
+                    nodesToKeep.push(nodesToKeepFromCurrent[i]);
+                }
+                var nodesToKeepFromStore = keepStore.querySelectorAll("[data-keep]");
+                for (var i = 0; i < nodesToKeepFromStore.length; ++i)
+                {
+                    nodesToKeep.push(nodesToKeepFromStore[i]);
+                }
 
-                    app.resetReadyState();
-
-                    // place persistent elements with "keep=PARENT_ID" attribute
-                    placeKeepAnnotated(currentDocument, newDocument);
-
-                    // keep script urls to allow for de-duplication to avoid reloading scripts already present
-                    var livePreviousScripts = currentDocument.getElementsByTagName("SCRIPT");
-                    for (var i = 0; i < livePreviousScripts.length; ++i)
+                // put all nodes back where they belong
+                // in case someone doesn't like them in the new document they are still there but not linked
+                for (var i = 0; i < nodesToKeep.length; ++i)
+                {
+                    var sourceNode = nodesToKeep[i];
+                    var sourceNodeParent = sourceNode.parentNode;
+                    var id = sourceNode.attributes.id.value;
+                    if (id)
                     {
-                        encounteredScriptUrls[livePreviousScripts[i].src] = null;
-                    }
-
-                    // publish argument updates for all parent routes and this route
-                    for (var i = 0; i < route.routes; ++i)
-                    {
-                        broker([ROUTE, route.routes[i].path], function() { return Rx.Observable.of(route.routes[i].args); }).pull();
-                    }
-
-                    // notify subscribers about changed route
-                    broker(ROUTE, function() { return Rx.Observable.of(route); }).pull();
-
-                    // perform document replace
-                    currentDocument.replaceChild(newDocument.documentElement, currentDocument.documentElement);
-
-                    // fix links in IE
-                    if (currentDocument.createStyleSheet)
-                    {
-                        var links = currentDocument.getElementsByTagName("LINK");
-                        for (var i = 0; i < links.length; ++i)
+                        var isFromStore = (sourceNode.ownerDocument === keepStore);
+                        var template = targetDocument.getElementById(id);
+                        if (template)
                         {
-                            link.href = link.href;
+                            // replace template with the "keep" annotated thing
+                            template.parentNode.replaceChild(targetDocument.importNode(sourceNode, true), template);
                         }
-                    }
-
-                    // enforce script execution
-                    forceScriptExecution(currentDocument, Array.prototype.filter.call(currentDocument.getElementsByTagName("script"), function(script)
-                    {
-                        if (script.parentNode.nodeName === "HEAD")
+                        else if (!isFromStore)
                         {
-                            if (Object.prototype.hasOwnProperty.call(encounteredScriptUrls, script.src))
-                            {
-                                //console.log("[ui] skip: ", script.src);
-                                // skip this script
-                                return false;
-                            }
+                            // stash in store
+                            keepStore.documentElement.appendChild(keepStore.importNode(sourceNode, true));
                         }
-                        return true;
-                    }));
-                }
-                catch (e)
-                {
-                    console.error("[ui] failed to construct target document: " + route.strippedPath + ": ", e);
-                /*
-                    currentDocument = currentDocument.open("text/html");
-                    currentDocument.write(newDocument.documentElement.outerHTML);
-                    currentDocument.close();
-                */
+                        else
+                        {
+                            // keep stashed away in store
+                            continue;
+                        }
+
+                        if (isFromStore)
+                            sourceNodeParent.removeChild(sourceNode);
+
+                        console.log("[ui] keepable restored: " + id);
+                    }
+                    else
+                    {
+                        console.error("[ui] element with attr. data-keep but no id: ", sourceNode.nodeName);
+                    }
                 }
 
-                // change path to reflect actual location
-                var title = undefined;
-                var titleNode = currentDocument.getElementsByTagName("TITLE");
-                if (titleNode.length > 0 && titleNode[0].childNodes.length > 0)
+                initializeNewKeepables(targetDocument);
+            };
+
+            var sliceAtIndexOf = function (subject, separator)
+            {
+                var i = subject.indexOf(separator);
+                if (i >= 0)
                 {
-                    title = titleNode[0].childNodes[0].nodeValue;
+                    return [subject.slice(0, i), subject.slice(i)];
+                }
+                return [subject, ""];
+            };
+
+            var splitPath = function (pathHashAndQuery)
+            {
+                var url = {path: "", hash: "", query: ""};
+                var parts = [pathHashAndQuery, ""];
+
+                parts = sliceAtIndexOf(parts[0], '?');
+                url.query = parts[1];
+
+                parts = sliceAtIndexOf(parts[0], '#');
+                url.hash = parts[1];
+                url.path = parts[0];
+
+                return url;
+            };
+
+            var splitRoute = function (canonicalPathWithArgs)
+            {
+                // TODO Use Object.defineProperty here.
+                var route = {
+                    routes: [],
+                    strippedPath: "",
+                    subscription: undefined,
+                    canonicalPathWithArgs: canonicalPathWithArgs,
+                    current: undefined
                 };
 
-                var targetPath = canonicalPathWithArgs + parts.hash + parts.query;
-                window.history.pushState(undefined, title, targetPath);
+                var path = [];
+                var segments = canonicalPathWithArgs.split("/");
+                for (var i = 0; i < segments.length;)
+                {
+                    path.push(segments[i]);
 
-                window.addEventListener("popstate", navigateOnPopState);
+                    var args = [];
+                    for (i = i + 1; i < segments.length; ++i)
+                    {
+                        if (!segments[i].startsWith(":"))
+                            break;
 
-                app.requireAllLoaded(function() { window.dispatchEvent(new Event("load")); });
+                        args.push(segments[i].slice(1));
+                    }
 
-                console.log("[ui] navigated to: " + targetPath + ", title: " + title);
-            },
-            function(e)
+                    route.routes.push({"path": path.join("/"), "args": args});
+                }
+
+                route.strippedPath = path.join("/");
+                route.current = route.routes[route.routes.length - 1];
+
+                return route;
+            };
+
+            var navigateOnPopState = function (e)
             {
-                console.error("[ui] failed to navigate to: " + route.strippedPath + ": ", e);
+                // navigate to the "current" page
+                var loc = window.location;
+                app.navigate(loc.pathname + loc.hash + loc.search);
+            };
+
+            var navigateRelative = function (relativePath)
+            {
+                var parts = splitPath(relativePath);
+                var canonicalPathWithArgs = app.canonicalizePath(parts.path);
+                var route = splitRoute(canonicalPathWithArgs);
+
+                // copy reference to avoid some firefox bug
+                var currentDocument = document;
+                route.subscription = getDocument(route.strippedPath).subscribe(function (newDocument)
+                    {
+                        try
+                        {
+                            // notify subscribers about next route (subscribers may cancel the routing attempt using "subscription"
+                            brokerEvent(app.subject.LEAVE_ROUTE, function ()
+                            {
+                                return Rx.Observable.of(route);
+                            }).pull();
+
+                            app.resetIsReady();
+
+                            // place persistent elements with "keep=PARENT_ID" attribute
+                            placeKeepAnnotated(currentDocument, newDocument);
+
+                            // keep script urls to allow for de-duplication to avoid reloading scripts already present
+                            var livePreviousScripts = currentDocument.getElementsByTagName("SCRIPT");
+                            for (var i = 0; i < livePreviousScripts.length; ++i)
+                            {
+                                encounteredScriptUrls[livePreviousScripts[i].src] = null;
+                            }
+
+                            // publish argument updates for all parent routes and this route
+                            for (var i = 0; i < route.routes.length; ++i)
+                            {
+                                broker([ROUTE, route.routes[i].path], Rx.Observable.of(route.routes[i].args)).pull();
+                            }
+
+                            // notify subscribers about changed route
+                            broker(ROUTE, function ()
+                            {
+                                return Rx.Observable.of(route);
+                            }).pull();
+
+                            // perform document replace
+                            currentDocument.replaceChild(newDocument.documentElement, currentDocument.documentElement);
+
+                            // fix links in IE
+                            if (currentDocument.createStyleSheet)
+                            {
+                                var links = currentDocument.getElementsByTagName("LINK");
+                                for (var i = 0; i < links.length; ++i)
+                                {
+                                    links[i].href = links[i].href;
+                                }
+                            }
+
+                            // enforce script execution
+                            forceScriptExecution(currentDocument, Array.prototype.filter.call(currentDocument.getElementsByTagName("script"), function (script)
+                            {
+                                if (script.parentNode.nodeName === "HEAD")
+                                {
+                                    if (Object.prototype.hasOwnProperty.call(encounteredScriptUrls, script.src))
+                                    {
+                                        //console.log("[ui] skip: ", script.src);
+                                        // skip this script
+                                        return false;
+                                    }
+                                }
+                                return true;
+                            }));
+                        }
+                        catch (e)
+                        {
+                            console.error("[ui] failed to construct target document: " + route.strippedPath + ": ", e);
+                            currentDocument = currentDocument.open("text/html");
+                            currentDocument.write(newDocument.documentElement.outerHTML);
+                            currentDocument.close();
+                        }
+
+                        // change path to reflect actual location
+                        var title = "";
+                        var titleNode = currentDocument.getElementsByTagName("TITLE");
+                        if (titleNode.length > 0 && titleNode[0].childNodes.length > 0)
+                        {
+                            title = titleNode[0].childNodes[0].nodeValue;
+                        }
+
+                        var targetPath = canonicalPathWithArgs + parts.hash + parts.query;
+                        window.history.pushState(undefined, title, targetPath);
+
+                        window.addEventListener("popstate", navigateOnPopState);
+
+                        app.requireAllLoaded(function ()
+                        {
+                            window.dispatchEvent(new Event("load"));
+                        });
+
+                        console.log("[ui] navigated to: " + targetPath + ", title: " + title);
+                    },
+                    function (e)
+                    {
+                        console.error("[ui] failed to navigate to: " + route.strippedPath + ": ", e);
+                    });
+
+                // notify subscribers about next route (subscribers may cancel the routing attempt using "subscription"
+                brokerEvent(NEXT_ROUTE, function ()
+                {
+                    return Rx.Observable.of(route);
+                }).pull();
+
+                console.log("[ui] navigate scheduled");
+            };
+
+            Object.defineProperty(app, "navigate", {
+                value: function (relativeDestination)
+                {
+                    if (relativeDestination === undefined || relativeDestination === null || relativeDestination === ".")
+                    {
+                        return brokerEvent(LEAVE_ROUTE);
+                    }
+
+                    var dst = relativeDestination;
+                    if (dst instanceof Object && dst.originalEvent)
+                    {
+                        dst.stopPropagation();
+                        dst.preventDefault();
+                        dst = dst.originalEvent;
+                    }
+
+                    if (dst instanceof Event)
+                        dst = dst.target;
+
+                    if (dst instanceof Element)
+                        dst = dst.getAttribute("href");
+
+                    navigateRelative(dst);
+                }
             });
 
-            // notify subscribers about next route (subscribers may cancel the routing attempt using "subscription"
-            brokerEvent(NEXT_ROUTE, function() { return Rx.Observable.of(route); }).pull();
+            // returns an Observable that receives the current route fragment, including arguments
+            Object.defineProperty(app, "activeRoute", {
+                value: broker(ROUTE)
+                    .map(function (route) { return route.current; })
+                    .takeUntil(app.navigate())
+            });
 
-            console.log("[ui] navigate scheduled");
-        };
+            // publish constants
+            Object.defineProperty(app.subject, LEAVE_ROUTE, {value: LEAVE_ROUTE});
+            Object.defineProperty(app.subject, NEXT_ROUTE, {value: NEXT_ROUTE});
+            Object.defineProperty(app.subject, ROUTE, {value: ROUTE});
 
+        })(window.app, document, window.Rx, window.app.broker, window.app.brokerEvent);
 
-        var navigate = function(relativeDestination)
-        {
-            if (relativeDestination === undefined || relativeDestination === null)
-            {
-                return brokerEvent(LEAVE_ROUTE);
-            }
-
-            var dst = relativeDestination;
-            if (dst instanceof Object && dst.originalEvent)
-            {
-                dst.stopPropagation();
-                dst.preventDefault();
-                dst = dst.originalEvent;
-            }
-
-            if (dst instanceof Event)
-                dst = dst.target;
-
-            if (dst instanceof Element)
-                dst = dst.getAttribute("href");
-
-            navigateRelative(dst);
-        };
-
-
-        // publish methods and constants
-        Object.defineProperty(app, "navigate", { value: navigate });
-        Object.defineProperty(app.subject, LEAVE_ROUTE, { value: LEAVE_ROUTE });
-        Object.defineProperty(app.subject, NEXT_ROUTE, { value: NEXT_ROUTE });
-        Object.defineProperty(app.subject, ROUTE, { value: ROUTE });
-
-    })(window.app, document, window.Rx, window.app.broker, window.app.brokerEvent);
-
-});
+    });
