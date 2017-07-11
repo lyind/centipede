@@ -87,14 +87,25 @@ function()
         }
 
 
-        Object.defineProperty(app, "hide", { value: function(element, isHidden)
+        Object.defineProperty(app, "hide", { value: function(element)
         {
-            if (isHidden)
-                element.setAttribute("hidden", "");
-            else
-                element.removeAttribute("hidden");
+            element.setAttribute("hidden", "");
         }});
 
+
+        Object.defineProperty(app, "show", { value: function(element)
+        {
+            element.removeAttribute("hidden");
+        }});
+
+
+        Object.defineProperty(app, "setVisibility", { value: function(element, shallBeVisible)
+        {
+            if (shallBeVisible)
+                app.show(element);
+            else
+                app.hide(element);
+        }});
 
         // Test if a value is an object
         Object.defineProperty(app, "isObject", { value: function(value)

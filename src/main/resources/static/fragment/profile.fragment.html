@@ -42,7 +42,7 @@
                             .distinctUntilChanged()
                             .subscribe(function(token)
                             {
-                                app.hide(that.parent, !!token);
+                                app.setVisibility(that.parent, !token);
                             });
                     });
                     //# sourceURL=profile.fragment.html#1
@@ -73,7 +73,7 @@
                             .distinctUntilChanged()
                             .subscribe(function(token)
                             {
-                                app.hide(that.parent, !token);
+                                app.setVisibility(that.parent, !!token);
                             });
 
                         // handle login name changes

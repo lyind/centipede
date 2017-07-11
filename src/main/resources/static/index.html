@@ -12,8 +12,9 @@
     <div class="divider"></div>
     <div data-id="serviceList" class="columns">
         <div data-id="serviceTemplate" class="column col-3 col-lg-6 col-xs-12" hidden="">
-            <div class="card">
-                <div class="card-body">
+            <div class="panel">
+                <div class="panel-body">
+                    <div data-id="serviceLoading" class="loading"></div>
                     <div class="columns">
                         <img data-id="serviceStateGlyph" class="no-touch img-responsive column col-3"
                             src="pic/unknown.svg">
@@ -23,7 +24,7 @@
                                 <button data-id="serviceDisableButton" class="btn btn-sm">Disable</button>
                             </div>
                             <div class="divider"></div>
-                            <h4  data-id="serviceName" class="card-title"></h4>
+                            <h4  data-id="serviceName" class="panel-title"></h4>
                             <button data-id="serviceEditButton" class="btn btn-primary">Configure</button>
                         </div>
                     </div>
@@ -60,6 +61,7 @@
                                     .takeUntil(itemRemoved)
                                     .subscribe(function (service)
                                     {
+                                        app.hide(added.serviceLoading);
                                         added.serviceName.innerText = service.name;
 
                                         // enable the right button
