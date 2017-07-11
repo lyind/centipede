@@ -63,6 +63,6 @@ public class CentipedeLogic
                 .port(mapping.getPort())
                 .build();
 
-        repository.insertOrUpdateServiceState(updatedService);
+        repository.insertServiceState(updatedService);
     }
 }

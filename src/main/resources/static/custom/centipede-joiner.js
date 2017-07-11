@@ -28,13 +28,6 @@ function()
 
     (function(app, broker)
     {
-        var currentToken = undefined;
-        broker(app.subject.TOKEN)
-            .subscribe(function(token)
-            {
-                currentToken = token;
-            });
-
         var joiner = function(message)
         {
             if (message instanceof ArrayBuffer)
@@ -51,11 +44,7 @@ function()
             }
             else
             {
-                // if token is not set and we got a valid token, add it to the message
-                if (message.token === undefined && currentToken)
-                {
-                    message.token = currentToken;
-                }
+                // add information to messages, here
             }
 
             return message;

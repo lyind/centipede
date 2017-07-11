@@ -22,7 +22,6 @@ import net.talpidae.centipede.database.dao.ServiceDao;
 import org.jdbi.v3.sqlobject.CreateSqlObject;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,16 +32,16 @@ public interface CentipedeRepository
     ServiceDao serviceDao();
 
     @Transaction
-    default void insertOrUpdateServiceExposedFields(Service service)
+    default void insertServiceConfiguration(Service service)
     {
-        serviceDao().insertExposedFields(service);
+        serviceDao().insertServiceConfiguration(service);
     }
 
 
     @Transaction
-    default void insertOrUpdateServiceState(Service service)
+    default void insertServiceState(Service service)
     {
-        serviceDao().insertOrUpdateServiceState(service);
+        serviceDao().insertServiceState(service);
     }
 
 

@@ -61,7 +61,7 @@ public class Services implements CallHandler
 
                 // TODO Add some validation here.
 
-                centipedeRepository.insertOrUpdateServiceExposedFields(service);
+                centipedeRepository.insertServiceConfiguration(service);
 
                 eventBus.post(new ServiceModified(service.getName()));
             }

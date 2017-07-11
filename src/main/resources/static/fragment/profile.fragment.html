@@ -2,7 +2,7 @@
 <meta charset="UTF-8">
 <link rel="stylesheet" href="core/app.css">
 <script src="/core/app.js"></script>
-<div class="popover popover-left" style="position: fixed; top: 1rem; right: 1rem;">
+<div class="popover popover-left" style="position: fixed; z-index: 1; top: 1rem; right: 1rem;">
     <button class="btn btn-lg btn-action circle" style="overflow:hidden; height: 7rem; width: 7rem;"><img class="no-touch" data-id="profileGlyph" src="../pic/user.svg"></button>
     <div class="popover-container" style="margin-top:10rem; margin-right:-5rem;">
         <div data-id="profileFrame" class="card text-left">
@@ -161,7 +161,7 @@
         // if we were on the signin page and received a token, navigate back to index (improve this)
         app.broker(app.subject.TOKEN)
             .distinctUntilChanged()
-            .filter(function(token) { return !!token; })
+            .filter(function(token) { console.log("token: " + token); return !!token; })
             .flatMap(function(token)
             {
                 return app.broker(app.subject.ROUTE).take(1);

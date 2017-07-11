@@ -17,6 +17,8 @@
 
 package net.talpidae.centipede.bean.service;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import org.jdbi.v3.core.mapper.reflect.ColumnName;
 
@@ -100,21 +102,22 @@ public class Service
     private final Integer port;
 
 
-    public Service(@ColumnName("generation") int generation,
-                   @ColumnName("retired") boolean retired,
-                   @ColumnName("ts") OffsetDateTime ts,
-                   @ColumnName("name") String name,
-                   @ColumnName("state") State state,
-                   @ColumnName("targetState") State targetState,
-                   @ColumnName("kind") Kind kind,
-                   @ColumnName("vmArguments") String vmArguments,
-                   @ColumnName("image") String image,
-                   @ColumnName("arguments") String arguments,
-                   @ColumnName("route") String route,
-                   @ColumnName("proxyPathPrefix") String proxyPathPrefix,
-                   @ColumnName("pid") Long pid,
-                   @ColumnName("host") String host,
-                   @ColumnName("port") Integer port)
+    @JsonCreator
+    public Service(@JsonProperty("generation") @ColumnName("generation") int generation,
+                   @JsonProperty("retired") @ColumnName("retired") boolean retired,
+                   @JsonProperty("ts") @ColumnName("ts") OffsetDateTime ts,
+                   @JsonProperty("name") @ColumnName("name") String name,
+                   @JsonProperty("state") @ColumnName("state") State state,
+                   @JsonProperty("targetState") @ColumnName("targetState") State targetState,
+                   @JsonProperty("kind") @ColumnName("kind") Kind kind,
+                   @JsonProperty("vmArguments") @ColumnName("vmArguments") String vmArguments,
+                   @JsonProperty("image") @ColumnName("image") String image,
+                   @JsonProperty("arguments") @ColumnName("arguments") String arguments,
+                   @JsonProperty("route") @ColumnName("route") String route,
+                   @JsonProperty("proxyPathPrefix") @ColumnName("proxyPathPrefix") String proxyPathPrefix,
+                   @JsonProperty("pid") @ColumnName("pid") Long pid,
+                   @JsonProperty("host") @ColumnName("host") String host,
+                   @JsonProperty("port") @ColumnName("port") Integer port)
     {
         this.generation = generation;
         this.retired = retired;

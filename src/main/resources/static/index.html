@@ -9,8 +9,9 @@
 <div data-keep="fragment/profile.fragment.html"></div>
 <div>
     <h2>Services</h2>
+    <div class="divider"></div>
     <div data-id="serviceList" class="columns">
-        <div data-id="serviceTemplate" class="column col-3 col-xs-6" hidden="">
+        <div data-id="serviceTemplate" class="column col-3 col-lg-6 col-xs-12" hidden="">
             <div class="card">
                 <div class="card-body">
                     <div class="columns">
@@ -18,8 +19,8 @@
                             src="pic/unknown.svg">
                         <div class="column col-9">
                             <div class="btn-group">
-                                <button class="btn btn-sm active">Enabled</button>
-                                <button class="btn btn-sm">Disabled</button>
+                                <button data-id="serviceEnableButton" class="btn btn-sm active">Enable</button>
+                                <button data-id="serviceDisableButton" class="btn btn-sm">Disable</button>
                             </div>
                             <div class="divider"></div>
                             <h4  data-id="serviceName" class="card-title"></h4>
@@ -61,6 +62,23 @@
                                     {
                                         added.serviceName.innerText = service.name;
 
+                                        // enable the right button
+                                        switch (service.targetState)
+                                        {
+                                            case "UP":
+                                                added.serviceEnableButton.classList.add("active");
+                                                added.serviceDisableButton.classList.remove("active");
+                                                break;
+                                            case "DOWN":
+                                                added.serviceEnableButton.classList.remove("active");
+                                                added.serviceDisableButton.classList.add("active");
+                                                break;
+                                            default:
+                                                added.serviceEnableButton.classList.remove("active");
+                                                added.serviceDisableButton.classList.remove("active");
+                                                break;
+                                        }
+
                                         var stateGlyph = "unknown";
                                         switch (service.state)
                                         {
@@ -84,6 +102,22 @@
                                         return "service-edit.html/:" + added.value;
                                     })
                                     .subscribe(app.navigate);
+
+                                app.eachClick(added.serviceEnableButton)
+                                    .takeUntil(itemRemoved)
+                                    .map(function (e)
+                                    {
+                                        return {"services": [{"name": added.value, "targetState": "UP"}]};
+                                    })
+                                    .subscribe(app.ws);
+
+                                app.eachClick(added.serviceDisableButton)
+                                    .takeUntil(itemRemoved)
+                                    .map(function (e)
+                                    {
+                                        return {"services": [{"name": added.value, "targetState": "DOWN"}]};
+                                    })
+                                    .subscribe(app.ws);
                             });
 
                         app.broker(app.subject.TOKEN)
