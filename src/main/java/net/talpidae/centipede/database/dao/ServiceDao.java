@@ -71,9 +71,9 @@ public interface ServiceDao
             + ")\n"
             + "  SELECT\n"
             + "    ifnull(s1.generation, 0) + 1 AS generation,\n"
-            + "    :name,\n"
-            + "    ifnull(ifnull(:retired, s1.retired), 0) AS retired,\n"
-            + "    ifnull(state, 'UNKNOWN') AS state,\n"
+            + "    ifnull(MAX(:name), :name) AS name,\n" // trick to always get a row returned
+            + "    ifnull(:retired, s1.retired) AS retired,\n"
+            + "    ifnull(state, 'UNKNOWN'),\n"
             + "    ifnull(ifnull(:targetState, s1.targetState), 'UNKNOWN') AS targetState,\n"
             + "    ifnull(:kind, s1.kind) AS kind,\n"
             + "    ifnull(:vmArguments, s1.vmArguments) AS vmArguments,\n"
@@ -113,7 +113,7 @@ public interface ServiceDao
             + ")\n"
             + "  SELECT\n"
             + "    ifnull(s1.generation, 0) + 1 AS generation,\n"
-            + "    :name,\n"
+            + "    ifnull(MAX(:name), :name) AS name,\n" // trick to always get a row returned
             + "    ifnull(ifnull(:retired, s1.retired), 0) AS retired,\n"
             + "    ifnull(ifnull(:state, s1.state), 'UNKNOWN') AS state,\n"
             + "    ifnull(s1.targetState, 'UNKNOWN') AS targetState,\n"
