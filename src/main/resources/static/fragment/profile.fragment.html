@@ -161,7 +161,7 @@
         // if we were on the signin page and received a token, navigate back to index (improve this)
         app.broker(app.subject.TOKEN)
             .distinctUntilChanged()
-            .filter(function(token) { console.log("token: " + token); return !!token; })
+            .filter(function(token) { return !!token; })
             .flatMap(function(token)
             {
                 return app.broker(app.subject.ROUTE).take(1);
