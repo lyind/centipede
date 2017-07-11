@@ -36,9 +36,9 @@
         Object.defineProperty(object, "parent", { value: parentNode});
         if (object.parent)
         {
-            Array.prototype.forEach.call(object.parent.querySelectorAll('*[id]:not([id=""])'), function(e)
+            Array.prototype.forEach.call(object.parent.querySelectorAll('*[data-id]:not([data-id=""])'), function(e)
             {
-                Object.defineProperty(object, e.id, { value: e });
+                Object.defineProperty(object, e.getAttribute("data-id"), { value: e });
             });
         }
 

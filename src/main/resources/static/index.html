@@ -6,26 +6,29 @@
 <h1>Please enable JavaScript to use this application.
     <script>document.currentScript.parentNode.setAttribute("hidden", "");</script>
 </h1>
-<div id="profile.fragment" data-keep="fragment/profile.fragment.html"></div>
+<div data-id="profile.fragment" data-keep="fragment/profile.fragment.html"></div>
 <div>
-    <div id="serviceList">
-        <div id="serviceTemplate" class="card" hidden="">
-            <div class="card-header">
-                <span class="card-image">
-                    <img class="no-touch img-responsive" style="height: 2rem; width: 2rem;" id="serviceStateGlyph"
-                         src="pic/unknown.svg">
-                </span>
-                <h4 id="serviceName" class="card-title"></h4>
-                <h6 class="card-subtitle"><span>State: </span><span id="serviceState"></span></h6>
-            </div>
-            <div class="card-body">
-                <div class="btn-group">
-                    <button class="btn btn-sm active">Enabled</button>
-                    <button class="btn btn-sm">Disabled</button>
+    <h2 data-id="titleNode">Services on </h2>
+    <div data-id="serviceList" class="columns">
+        <div data-id="serviceTemplate" class="column col-3 col-xs-6" hidden="">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-image">
+                        <img data-id="serviceStateGlyph" class="no-touch img-responsive" style="height: 2rem; width: 2rem;"
+                             src="pic/unknown.svg">
+                    </span>
+                    <h4  data-id="serviceName" class="card-title"></h4>
+                    <h6 class="card-subtitle"><span>State: </span><span data-id="serviceState"></span></h6>
                 </div>
-            </div>
-            <div class="card-footer">
-                <button id="serviceEditButton" class="btn btn-primary">Configure</button>
+                <div class="card-body">
+                    <div class="btn-group">
+                        <button class="btn btn-sm active">Enabled</button>
+                        <button class="btn btn-sm">Disabled</button>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button data-id="serviceEditButton" class="btn btn-primary">Configure</button>
+                </div>
             </div>
         </div>
 
@@ -35,7 +38,17 @@
                 app.require("core/array-adapter.js",
                     function ()
                     {
-                        var services = app.broker(app.subject.SERVICES).takeUntil(app.navigate());
+                        var services = app.broker(app.subject.TOKEN)
+                            .filter(function (token)
+                            {
+                                return !!token;
+                            })
+                            .flatMap(function ()
+                            {
+                                return app.broker(app.subject.SERVICES);
+                            })
+                            .takeUntil(app.navigate());
+
                         var adapter = app.arrayAdapter(that.serviceTemplate, services);
 
                         adapter.added()
@@ -69,7 +82,10 @@
 
                                 app.eachClick(added.serviceEditButton)
                                     .takeUntil(itemRemoved)
-                                    .map(function(e) { return "service-edit.html/:" + added.value; })
+                                    .map(function (e)
+                                    {
+                                        return "service-edit.html/:" + added.value;
+                                    })
                                     .subscribe(app.navigate);
                             });
 
@@ -89,17 +105,7 @@
             });
         </script>
     </div>
+    <script>
 
-    <!--
-    <a href="service-edit.html?id=123">Edit Service #123
-
-        <script>
-        app(function(that, app)
-        {
-            app.eachClick(that.parent).subscribe(app.navigate);
-        });
-        </script>
-    </a>
-    -->
-
+    </script>
 </div>
