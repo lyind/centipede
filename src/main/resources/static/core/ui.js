@@ -32,9 +32,11 @@ app.require([
             const LEAVE_ROUTE = "LEAVE_ROUTE";
             const NEXT_ROUTE = "NEXT_ROUTE";
             const ROUTE = "ROUTE";
+            const ATTRIBUTE_KEEP = "data-keep";
 
             var html5doctype = document.implementation.createDocumentType('html', '', '');
             var keepStore = document.implementation.createDocument('', 'html', html5doctype);
+            var keepables = {};
             var encounteredScriptUrls = {};
 
             // ensure these subjects are kept available
@@ -89,23 +91,22 @@ app.require([
                 }
             };
 
-            var initializeKeepable = function (targetDocument, keepableNode)
+            var initializeKeepable = function (targetDocument, keepableNode, keepableSource)
             {
-                var src = keepableNode.getAttribute("data-keep");
-                if (src)
+                if (keepableSource)
                 {
-                    if (src.endsWith(".js"))
+                    if (keepableSource.endsWith(".js"))
                     {
                         // script only fragment requested
-                        app.require(src, function ()
+                        app.require(keepableSource, function ()
                         {
-                            keepableNode.setAttribute("data-keep", "");
+                            keepables[keepableSource] = keepableNode;
                         });
                     }
                     else
                     {
                         // HTML fragment requested
-                        getFragment(targetDocument, app.canonicalizePath(src)).subscribe(function (fragment)
+                        getFragment(targetDocument, app.canonicalizePath(keepableSource)).subscribe(function (fragment)
                         {
                             keepableNode.appendChild(fragment);
                             forceScriptExecution(targetDocument, Array.prototype.map.call(keepableNode.getElementsByTagName("script"), function (node)
@@ -113,74 +114,72 @@ app.require([
                                 return node;
                             }));
 
-                            keepableNode.setAttribute("data-keep", "");  // flag as rendered
+                            keepables[keepableSource] = keepableNode;
                         });
                     }
                 }
             };
 
-            var initializeNewKeepables = function (targetDocument)
+            var initializeNewKeepables = function (targetDocument, newKeepables)
             {
-                var newKeepables = targetDocument.querySelectorAll('[data-keep]:not([data-keep=""])');
-                for (var i = 0; i < newKeepables.length; ++i)
+                for (var src in newKeepables)
                 {
-                    initializeKeepable(targetDocument, newKeepables[i]);
+                    if (Object.prototype.hasOwnProperty.call(newKeepables, src))
+                    {
+                        initializeKeepable(targetDocument, newKeepables[src], src);
+                    }
                 }
             };
 
             var placeKeepAnnotated = function (sourceDocument, targetDocument)
             {
-                var nodesToKeep = [];
-                var nodesToKeepFromCurrent = sourceDocument.querySelectorAll('[data-keep=""]');
-                for (var i = 0; i < nodesToKeepFromCurrent.length; ++i)
-                {
-                    nodesToKeep.push(nodesToKeepFromCurrent[i]);
-                }
-                var nodesToKeepFromStore = keepStore.querySelectorAll("[data-keep]");
-                for (var i = 0; i < nodesToKeepFromStore.length; ++i)
-                {
-                    nodesToKeep.push(nodesToKeepFromStore[i]);
-                }
+                var targetKeepables = {};
+                Array.prototype.forEach.call(targetDocument.querySelectorAll('[' + ATTRIBUTE_KEEP + ']'),
+                    function(keepableNode)
+                    {
+                        var src = keepableNode.getAttribute(ATTRIBUTE_KEEP);
+                        if (src)
+                        {
+                            targetKeepables[src] = keepableNode;
+                        }
+                    });
 
                 // put all nodes back where they belong
-                // in case someone doesn't like them in the new document they are still there but not linked
-                for (var i = 0; i < nodesToKeep.length; ++i)
+                // in case someone doesn't like them in the new document we still keep them around in our store
+                for (var src in keepables)
                 {
-                    var sourceNode = nodesToKeep[i];
-                    var sourceNodeParent = sourceNode.parentNode;
-                    var id = sourceNode.attributes.id.value;
-                    if (id)
+                    if (!Object.prototype.hasOwnProperty.call(keepables, src))
+                        continue;
+
+                    var keepable = keepables[src];
+                    if (Object.prototype.hasOwnProperty.call(targetKeepables, src))
                     {
-                        var isFromStore = (sourceNode.ownerDocument === keepStore);
-                        var template = targetDocument.getElementById(id);
-                        if (template)
-                        {
-                            // replace template with the "keep" annotated thing
-                            template.parentNode.replaceChild(targetDocument.importNode(sourceNode, true), template);
-                        }
-                        else if (!isFromStore)
-                        {
-                            // stash in store
-                            keepStore.documentElement.appendChild(keepStore.importNode(sourceNode, true));
-                        }
-                        else
-                        {
-                            // keep stashed away in store
-                            continue;
-                        }
+                        var template = targetKeepables[src];
 
-                        if (isFromStore)
-                            sourceNodeParent.removeChild(sourceNode);
+                        // we know this keepable is initialized
+                        delete targetKeepables[src];
 
-                        console.log("[ui] keepable restored: " + id);
+                        // replace template with the "data-keep" annotated thing
+                        template.parentNode.replaceChild((keepables[src] = targetDocument.importNode(keepable, true)), template);
+
+                        if (keepable.ownerDocument === keepStore)
+                            keepable.parentNode.removeChild(keepable);
+
+                        console.log("[ui] keepable restored: " + src);
+                    }
+                    else if (keepable.ownerDocument !== keepStore)
+                    {
+                        // stash in store
+                        keepables[src] = keepStore.documentElement.appendChild(keepStore.importNode(keepable, true));
                     }
                     else
                     {
-                        console.error("[ui] element with attr. data-keep but no id: ", sourceNode.nodeName);
+                        // keep stashed away in store
+                        continue;
                     }
                 }
 
-                initializeNewKeepables(targetDocument);
+                initializeNewKeepables(targetDocument, targetKeepables);
             };
 
             var sliceAtIndexOf = function (subject, separator)

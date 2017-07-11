@@ -6,28 +6,26 @@
 <h1>Please enable JavaScript to use this application.
     <script>document.currentScript.parentNode.setAttribute("hidden", "");</script>
 </h1>
-<div data-id="profile.fragment" data-keep="fragment/profile.fragment.html"></div>
+<div data-keep="fragment/profile.fragment.html"></div>
 <div>
-    <h2 data-id="titleNode">Services on </h2>
+    <h2>Services</h2>
     <div data-id="serviceList" class="columns">
         <div data-id="serviceTemplate" class="column col-3 col-xs-6" hidden="">
             <div class="card">
-                <div class="card-header">
-                    <span class="card-image">
-                        <img data-id="serviceStateGlyph" class="no-touch img-responsive" style="height: 2rem; width: 2rem;"
-                             src="pic/unknown.svg">
-                    </span>
-                    <h4  data-id="serviceName" class="card-title"></h4>
-                    <h6 class="card-subtitle"><span>State: </span><span data-id="serviceState"></span></h6>
-                </div>
                 <div class="card-body">
-                    <div class="btn-group">
-                        <button class="btn btn-sm active">Enabled</button>
-                        <button class="btn btn-sm">Disabled</button>
+                    <div class="columns">
+                        <img data-id="serviceStateGlyph" class="no-touch img-responsive column col-3"
+                            src="pic/unknown.svg">
+                        <div class="column col-9">
+                            <div class="btn-group">
+                                <button class="btn btn-sm active">Enabled</button>
+                                <button class="btn btn-sm">Disabled</button>
+                            </div>
+                            <div class="divider"></div>
+                            <h4  data-id="serviceName" class="card-title"></h4>
+                            <button data-id="serviceEditButton" class="btn btn-primary">Configure</button>
+                        </div>
                     </div>
-                </div>
-                <div class="card-footer">
-                    <button data-id="serviceEditButton" class="btn btn-primary">Configure</button>
                 </div>
             </div>
         </div>
@@ -62,7 +60,6 @@
                                     .subscribe(function (service)
                                     {
                                         added.serviceName.innerText = service.name;
-                                        added.serviceState.innerText = service.state;
 
                                         var stateGlyph = "unknown";
                                         switch (service.state)
