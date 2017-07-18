@@ -40,9 +40,9 @@ app.require([
             var encounteredScriptUrls = {};
 
             // ensure these subjects are kept available
-            brokerEvent(LEAVE_ROUTE).subscribe();
-            brokerEvent(NEXT_ROUTE).subscribe();
-            broker(ROUTE).subscribe();
+            brokerEvent(LEAVE_ROUTE).subscribe(); // function(route) { console.log("[ui] LEAVE_ROUTE: ", route); });
+            brokerEvent(NEXT_ROUTE).subscribe(); // function(nextRoute) { console.log("[ui] NEXT_ROUTE: ", nextRoute); });
+            broker(ROUTE).subscribe(); //function(route) { console.log("[ui] ROUTE: ", route); });
 
             // request a full DOM document
             var getDocument = function (canonicalPath)
@@ -257,16 +257,19 @@ app.require([
 
                 // copy reference to avoid some firefox bug
                 var currentDocument = document;
-                route.subscription = getDocument(route.strippedPath).subscribe(function (newDocument)
+                route.subscription = getDocument(route.strippedPath)
+                    .do(function()
+                    {
+                        // notify subscribers that we are now leaving the route
+                        brokerEvent(app.subject.LEAVE_ROUTE, function ()
+                        {
+                            return Rx.Observable.of(route);
+                        }).pull();
+                    })
+                    .subscribe(function (newDocument)
                     {
                         try
                         {
-                            // notify subscribers about next route (subscribers may cancel the routing attempt using "subscription"
-                            brokerEvent(app.subject.LEAVE_ROUTE, function ()
-                            {
-                                return Rx.Observable.of(route);
-                            }).pull();
-
                             app.resetIsReady();
 
                             // place persistent elements with "keep=PARENT_ID" attribute
@@ -393,6 +396,31 @@ app.require([
                     .map(function (route) { return route.current; })
                     .takeUntil(app.navigate())
             });
+
+            // create a function that, when called, updates the named property on subject and returns subject
+            Object.defineProperty(app, "setter", {
+                value: function(subject, property)
+                {
+                    return function(value)
+                    {
+                        subject[property] = value;
+
+                        return subject;
+                    }
+                }
+            });
+
+            // create a function that, when called, updates the named property on subject and returns subject
+            Object.defineProperty(app, "getter", {
+                value: function(subject, property)
+                {
+                    return function()
+                    {
+                        return subject[property];
+                    }
+                }
+            });
+
 
             // publish constants
             Object.defineProperty(app.subject, LEAVE_ROUTE, {value: LEAVE_ROUTE});

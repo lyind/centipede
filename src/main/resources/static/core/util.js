@@ -18,127 +18,196 @@
 
 // UI helper
 app.require([],
-function()
-{
-    console.log("[util] init");
-
-    (function(app, window)
+    function ()
     {
-        // test for storage capability, example: app.storageAvailable("localStorage") -> true
-        // copied from https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API/Using_the_Web_Storage_API
-        Object.defineProperty(app, "storageAvailable", { value: function(type)
-        {
-            try {
-                var storage = window[type],
-                    x = '__storage_test__';
-                storage.setItem(x, x);
-                storage.removeItem(x);
-                return true;
-            }
-            catch(e) {
-                return e instanceof DOMException && (
-                    // everything except Firefox
-                    e.code === 22 ||
-                    // Firefox
-                    e.code === 1014 ||
-                    // test name field too, because code might not be present
-                    // everything except Firefox
-                    e.name === 'QuotaExceededError' ||
-                    // Firefox
-                    e.name === 'NS_ERROR_DOM_QUOTA_REACHED') &&
-                    // acknowledge QuotaExceededError only if there's something already stored
-                    storage.length !== 0;
-            }
-        }});
+        console.log("[util] init");
 
-
-        // simple storage abstraction (ignores quotas)
-        var haveLocalStorage = app.storageAvailable("localStorage");
-        if (haveLocalStorage || app.storageAvailable("sessionStorage"))
+        (function (app, window)
         {
-            var storage = haveLocalStorage ? window.localStorage : window.sessionStorage;
-            Object.defineProperty(app, "set", { value: function(key, value) { storage.setItem(key, value); }});
-            Object.defineProperty(app, "get", { value: function(key) { return storage.getItem(key); }});
-            Object.defineProperty(app, "remove", { value: function(key) { storage.removeItem(key); }});
-        }
-        else
-        {
-            var storage = {};
-            Object.defineProperty(app, "set", { value: function(key, value)
-            {
-                storage[key] = value;
-            }});
-            Object.defineProperty(app, "get", { value: function(key)
-            {
-                if (Object.prototype.hasOwnProperty.call(storage, key))
+            // test for storage capability, example: app.storageAvailable("localStorage") -> true
+            // copied from https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API/Using_the_Web_Storage_API
+            Object.defineProperty(app, "storageAvailable", {
+                value: function (type)
                 {
-                    return storage[key];
+                    try
+                    {
+                        var storage = window[type],
+                            x = '__storage_test__';
+                        storage.setItem(x, x);
+                        storage.removeItem(x);
+                        return true;
+                    }
+                    catch (e)
+                    {
+                        return e instanceof DOMException && (
+                                // everything except Firefox
+                            e.code === 22 ||
+                            // Firefox
+                            e.code === 1014 ||
+                            // test name field too, because code might not be present
+                            // everything except Firefox
+                            e.name === 'QuotaExceededError' ||
+                            // Firefox
+                            e.name === 'NS_ERROR_DOM_QUOTA_REACHED') &&
+                            // acknowledge QuotaExceededError only if there's something already stored
+                            storage.length !== 0;
+                    }
                 }
+            });
 
-                return undefined;
-            }});
-            Object.defineProperty(app, "remove", { value: function(key)
+            // simple storage abstraction (ignores quotas)
+            var haveLocalStorage = app.storageAvailable("localStorage");
+            if (haveLocalStorage || app.storageAvailable("sessionStorage"))
             {
-                if (Object.prototype.hasOwnProperty.call(fallbackStorage, key))
-                {
-                    delete fallbackStorage[key];
-                }
-            }});
-        }
-
-
-        Object.defineProperty(app, "hide", { value: function(element)
-        {
-            element.setAttribute("hidden", "");
-        }});
-
-
-        Object.defineProperty(app, "show", { value: function(element)
-        {
-            element.removeAttribute("hidden");
-        }});
-
-
-        Object.defineProperty(app, "setVisibility", { value: function(element, shallBeVisible)
-        {
-            if (shallBeVisible)
-                app.show(element);
+                var storage = haveLocalStorage ? window.localStorage : window.sessionStorage;
+                Object.defineProperty(app, "set", {
+                    value: function (key, value)
+                    {
+                        storage.setItem(key, value);
+                    }
+                });
+                Object.defineProperty(app, "get", {
+                    value: function (key)
+                    {
+                        return storage.getItem(key);
+                    }
+                });
+                Object.defineProperty(app, "remove", {
+                    value: function (key)
+                    {
+                        storage.removeItem(key);
+                    }
+                });
+            }
             else
-                app.hide(element);
-        }});
+            {
+                var storage = {};
+                Object.defineProperty(app, "set", {
+                    value: function (key, value)
+                    {
+                        storage[key] = value;
+                    }
+                });
+                Object.defineProperty(app, "get", {
+                    value: function (key)
+                    {
+                        if (Object.prototype.hasOwnProperty.call(storage, key))
+                        {
+                            return storage[key];
+                        }
 
-        // Test if a value is an object
-        Object.defineProperty(app, "isObject", { value: function(value)
-        {
-            return value === Object(value);
-        }});
+                        return undefined;
+                    }
+                });
+                Object.defineProperty(app, "remove", {
+                    value: function (key)
+                    {
+                        if (Object.prototype.hasOwnProperty.call(fallbackStorage, key))
+                        {
+                            delete fallbackStorage[key];
+                        }
+                    }
+                });
+            }
 
+            Object.defineProperty(app, "hide", {
+                value: function (element)
+                {
+                    element.setAttribute("hidden", "");
+                    element.classList.add("hide");
+                }
+            });
 
-        // Test if a value is a function (Date, Array, Object... are functions too)
-        Object.defineProperty(app, "isFunction", { value: function(value)
-        {
-            return typeof(value) === 'function';
-        }});
+            Object.defineProperty(app, "show", {
+                value: function (element)
+                {
+                    element.removeAttribute("hidden");
+                    element.classList.remove("hide");
+                }
+            });
 
+            Object.defineProperty(app, "setReadonly", {
+                value: function (element, isReadonly)
+                {
+                    var tagName = (element.tagName || "").toLowerCase();
+                    if (isReadonly)
+                    {
+                        if (tagName === "select")
+                        {
+                            element.setAttribute("disabled", "");
+                        }
+                        else
+                        {
+                            element.setAttribute("readonly", "");
+                        }
+                    }
+                    else
+                    {
+                        if (tagName === "select")
+                        {
+                            element.removeAttribute("disabled");
+                        }
+                        else
+                        {
+                            element.removeAttribute("readonly");
+                        }
+                    }
+                }
+            });
 
-        var stopEventPropagation = function(e)
-        {
-            e.preventDefault();
-            e.stopPropagation();
-        };
+            Object.defineProperty(app, "setVisibility", {
+                value: function (element, shallBeVisible)
+                {
+                    if (shallBeVisible)
+                        app.show(element);
+                    else
+                        app.hide(element);
+                }
+            });
 
-        // just a few shortcuts over using Observable.fromEvent() manually
-        Object.defineProperty(app, "eachClick", { value: function(element)
-        {
-            return Rx.Observable.fromEvent(element, "click").do(stopEventPropagation);
-        }});
+            // Test if a value is an object
+            Object.defineProperty(app, "isObject", {
+                value: function (value)
+                {
+                    return value === Object(value);
+                }
+            });
 
+            // Test if a value is a function (Date, Array, Object... are functions too)
+            Object.defineProperty(app, "isFunction", {
+                value: function (value)
+                {
+                    return typeof(value) === 'function';
+                }
+            });
 
-        Object.defineProperty(app, "eachSubmit", { value: function(element)
-        {
-            return Rx.Observable.fromEvent(element, "submit").do(stopEventPropagation);
-        }});
+            var stopEventPropagation = function (e)
+            {
+                e.preventDefault();
+                e.stopPropagation();
+            };
 
+            // just a few shortcuts over using Observable.fromEvent() manually
+            Object.defineProperty(app, "eachClick", {
+                value: function (element)
+                {
+                    return Rx.Observable.fromEvent(element, "click").do(stopEventPropagation);
+                }
+            });
 
-    })(window.app, window);
-});
+            Object.defineProperty(app, "eachSubmit", {
+                value: function (element)
+                {
+                    return Rx.Observable.fromEvent(element, "submit").do(stopEventPropagation);
+                }
+            });
+
+            Object.defineProperty(app, "eachInput", {
+                value: function (element)
+                {
+                    return Rx.Observable.fromEvent(element, "input");
+                }
+            });
+
+        })(window.app, window);
+    });

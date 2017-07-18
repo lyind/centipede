@@ -11,21 +11,23 @@
     <h2>Services</h2>
     <div class="divider"></div>
     <div data-id="serviceList" class="columns">
-        <div data-id="serviceTemplate" class="column col-3 col-lg-6 col-xs-12" hidden="">
+        <div data-id="serviceTemplate" class="column col-4 col-lg-6 col-sm-10 col-xs-12" hidden="">
             <div class="panel">
                 <div class="panel-body">
                     <div data-id="serviceLoading" class="loading"></div>
                     <div class="columns">
-                        <img data-id="serviceStateGlyph" class="no-touch img-responsive column col-3"
+                        <img data-id="serviceStateGlyph" class="no-touch column col-3"
                             src="pic/unknown.svg">
                         <div class="column col-9">
+                            <h4  data-id="serviceName" class="panel-title text-ellipsis"></h4>
+                            <div class="divider"></div>
                             <div class="btn-group">
                                 <button data-id="serviceEnableButton" class="btn btn-sm active">Enable</button>
                                 <button data-id="serviceDisableButton" class="btn btn-sm">Disable</button>
                             </div>
-                            <div class="divider"></div>
-                            <h4  data-id="serviceName" class="panel-title"></h4>
-                            <button data-id="serviceEditButton" class="btn btn-primary">Configure</button>
+                            <div class="btn-group float-right">
+                                <button data-id="serviceEditButton" class="btn btn-primary btn-sm">Configure</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -39,15 +41,15 @@
                     function ()
                     {
                         var services = app.broker(app.subject.TOKEN)
+                            .takeUntil(app.navigate())
                             .filter(function (token)
                             {
                                 return !!token;
                             })
                             .flatMap(function ()
                             {
-                                return app.broker(app.subject.SERVICES);
+                                return app.broker(app.subject.SERVICES).takeUntil(app.navigate());
                             })
-                            .takeUntil(app.navigate());
 
                         var adapter = app.arrayAdapter(that.serviceTemplate, services);
 
