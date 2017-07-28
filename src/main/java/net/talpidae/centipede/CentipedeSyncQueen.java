@@ -24,8 +24,10 @@ import net.talpidae.base.insect.message.payload.Mapping;
 import net.talpidae.centipede.event.NewMapping;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 
+@Singleton
 public class CentipedeSyncQueen extends SyncQueen
 {
     private final EventBus eventBus;
