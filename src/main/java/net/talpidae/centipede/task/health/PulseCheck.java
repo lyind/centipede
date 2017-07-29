@@ -142,9 +142,9 @@ public class PulseCheck implements Runnable
     private Stream<InsectState> getUpInsectState()
     {
         val noPulseDownThresholdNanos = TimeUnit.MILLISECONDS.toNanos(queenSettings.getPulseDelay() * 3L);
-
-        // fill state cache with insect that recently showed a pulse
         val now = System.nanoTime();
+
+        // fill state cache with insect that until recently have a pulse
         return syncQueen.getLiveInsectState()
                 .filter(state -> (now - state.getTimestamp()) < noPulseDownThresholdNanos);
     }
