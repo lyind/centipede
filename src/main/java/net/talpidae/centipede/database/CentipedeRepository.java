@@ -56,4 +56,10 @@ public interface CentipedeRepository
     {
         return serviceDao().findAll();
     }
+
+    @Transaction
+    default List<String> findAllNames()
+    {
+        return serviceDao().findAllNames();
+    }
 }

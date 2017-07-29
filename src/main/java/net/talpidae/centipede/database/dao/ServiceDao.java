@@ -41,6 +41,17 @@ public interface ServiceDao
             + "ORDER BY name ASC")
     List<Service> findAll();
 
+    @SqlQuery("SELECT name\n"
+            + "FROM service\n"
+            + "WHERE NOT retired\n"
+            + "  AND generation = (\n"
+            + "    SELECT MAX(s2.generation)\n"
+            + "    FROM service s2\n"
+            + "    WHERE s2.name = name\n"
+            + "  )\n"
+            + "ORDER BY name ASC")
+    List<String> findAllNames();
+
     @RegisterConstructorMapper(Service.class)
     @SqlQuery("SELECT *\n"
             + "FROM service\n"

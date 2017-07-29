@@ -22,10 +22,12 @@ import lombok.Getter;
 import lombok.val;
 import net.talpidae.centipede.bean.service.Api;
 import net.talpidae.centipede.database.CentipedeRepository;
-import net.talpidae.centipede.event.ServiceModified;
+import net.talpidae.centipede.event.ServicesModified;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.util.ArrayList;
+import java.util.Collections;
 
 
 @Getter
@@ -55,19 +57,26 @@ public class Services implements CallHandler
             val serviceIterator = request.getServices().iterator();
 
             // accept changes if there are any
-            while (serviceIterator.hasNext())
+            if (serviceIterator.hasNext())
             {
-                val service = serviceIterator.next();
+                val names = new ArrayList<String>();
+                while (serviceIterator.hasNext())
+                {
+                    val service = serviceIterator.next();
 
-                // TODO Add some validation here.
+                    // TODO Add some validation here.
 
-                centipedeRepository.insertServiceConfiguration(service);
+                    centipedeRepository.insertServiceConfiguration(service);
+                    names.add(service.getName());
+                }
 
-                eventBus.post(new ServiceModified(service.getName()));
+                eventBus.post(new ServicesModified(Collections.unmodifiableList(names)));
             }
-
-            // fulfill list request
-            request.setServices(centipedeRepository.findAll());
+            else
+            {
+                // fulfill list request
+                request.setServices(centipedeRepository.findAll());
+            }
         }
 
         return request;

@@ -21,12 +21,15 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.inject.Singleton;
 import lombok.val;
+import net.talpidae.base.util.thread.GeneralScheduler;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.NewMapping;
+import net.talpidae.centipede.task.health.PulseCheck;
 
 import javax.inject.Inject;
+import java.util.concurrent.TimeUnit;
 
 
 @Singleton
@@ -36,14 +39,19 @@ public class CentipedeLogic
 
     private final EventBus eventBus;
 
+    private final GeneralScheduler scheduler;
+
 
     @Inject
-    public CentipedeLogic(CentipedeRepository repository, EventBus eventBus)
+    public CentipedeLogic(CentipedeRepository repository, EventBus eventBus, GeneralScheduler scheduler, PulseCheck pulseCheck)
     {
         this.repository = repository;
         this.eventBus = eventBus;
+        this.scheduler = scheduler;
 
         eventBus.register(this);
+
+        scheduler.scheduleWithFixedDelay(pulseCheck, 3500L, 1500L, TimeUnit.MILLISECONDS);
     }
 
 
@@ -56,8 +64,7 @@ public class CentipedeLogic
         val mapping = newMapping.getMapping();
         val updatedService = Service.builder()
                 .name(mapping.getName())
-                .state(State.UP)
-                .targetState(State.UNKNOWN)
+                .state(State.CHANGING)
                 .route(mapping.getRoute())
                 .host(mapping.getHost())
                 .port(mapping.getPort())
