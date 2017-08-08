@@ -7,6 +7,7 @@ import net.talpidae.centipede.bean.service.Api;
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.ServicesModified;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 
@@ -20,6 +21,7 @@ public class EventForwarder
     private final CentipedeRepository centipedeRepository;
 
 
+    @Inject
     public EventForwarder(EventBus eventBus, ApiBroadcastQueue apiBroadcastQueue, CentipedeRepository centipedeRepository)
     {
         this.eventBus = eventBus;

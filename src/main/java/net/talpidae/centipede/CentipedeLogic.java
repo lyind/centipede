@@ -26,9 +26,12 @@ import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.NewMapping;
+import net.talpidae.centipede.event.ServicesModified;
+import net.talpidae.centipede.service.EventForwarder;
 import net.talpidae.centipede.task.health.PulseCheck;
 
 import javax.inject.Inject;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 
@@ -41,13 +44,16 @@ public class CentipedeLogic
 
     private final GeneralScheduler scheduler;
 
+    private final EventForwarder eventForwarder;
+
 
     @Inject
-    public CentipedeLogic(CentipedeRepository repository, EventBus eventBus, GeneralScheduler scheduler, PulseCheck pulseCheck)
+    public CentipedeLogic(CentipedeRepository repository, EventBus eventBus, GeneralScheduler scheduler, PulseCheck pulseCheck, EventForwarder eventForwarder)
     {
         this.repository = repository;
         this.eventBus = eventBus;
         this.scheduler = scheduler;
+        this.eventForwarder = eventForwarder;
 
         eventBus.register(this);
 
@@ -71,5 +77,6 @@ public class CentipedeLogic
                 .build();
 
         repository.insertServiceState(updatedService);
+        eventBus.post(new ServicesModified(Collections.singletonList(mapping.getName())));
     }
 }

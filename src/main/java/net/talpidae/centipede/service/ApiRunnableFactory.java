@@ -22,16 +22,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.talpidae.base.util.auth.AuthenticationSecurityContext;
 import net.talpidae.base.util.queue.Enqueueable;
 import net.talpidae.base.util.session.SessionHolder;
 import net.talpidae.centipede.bean.service.Api;
-import net.talpidae.centipede.service.calls.CallHandler;
 import net.talpidae.centipede.service.calls.CallException;
+import net.talpidae.centipede.service.calls.CallHandler;
 import net.talpidae.centipede.service.calls.Security;
 
 import javax.inject.Inject;
@@ -132,6 +130,7 @@ public class ApiRunnableFactory
 
     private void sendResponse(Session session, String message, SendHandler sendHandler)
     {
+        log.debug("sending: " + message);
         session.getAsyncRemote().sendText(message, result ->
         {
             Optional.ofNullable(result.getException())
@@ -180,11 +179,9 @@ public class ApiRunnableFactory
                 setSessionEventOffset(session, lastEvent.getOffset());
 
                 // try to send out all new events
-                val chainSender = new ChainSender<String>(events.iterator());
-
-                chainSender.setSendHandler(result ->
+                new ChainSender<>(events.iterator(), (chainSender, result) ->
                 {
-                    if (result.isOK())
+                    if (result == null || result.isOK())
                     {
                         val next = chainSender.next();
 
@@ -200,7 +197,7 @@ public class ApiRunnableFactory
 
                         sendResponse(session, apiBroadcastOverflow);
                     }
-                });
+                }).start();
             }
         }
     }
@@ -285,33 +282,50 @@ public class ApiRunnableFactory
     }
 
 
-    private class ChainSender<T>
+    public interface ChainSenderHandler<T>
+    {
+        /**
+         * The onElementResult() method must evaluate the SendResult, call next() and send().
+         */
+        void onElementResult(ChainSender<T> chainSender, SendResult result);
+    }
+
+
+    private class ChainSender<T> implements SendHandler
     {
         private final Iterator<Enqueueable<T>> events;
 
-        @Getter
-        private Enqueueable<T> current;
+        private final ChainSenderHandler<T> sendHandler;
 
-        @Getter
-        @Setter
-        private SendHandler sendHandler;
-
-
-        ChainSender(Iterator<Enqueueable<T>> events)
+        ChainSender(Iterator<Enqueueable<T>> events, ChainSenderHandler<T> sendHandler)
         {
             this.events = events;
-            this.current = next();
+            this.sendHandler = sendHandler;
+        }
+
+        @Override
+        public void onResult(SendResult result)
+        {
+            sendHandler.onElementResult(this, result);
         }
 
         public Enqueueable<T> next()
         {
-            return current = ((events.hasNext()) ? events.next() : null);
+            return (events.hasNext()) ? events.next() : null;
         }
 
 
         public void send(Session session, String message)
         {
-            sendResponse(session, message, getSendHandler());
+            sendResponse(session, message, this);
+        }
+
+        /**
+         * Start the chain.
+         */
+        public void start()
+        {
+            onResult(null);
         }
     }
 }

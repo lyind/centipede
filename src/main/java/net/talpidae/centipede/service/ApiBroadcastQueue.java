@@ -47,7 +47,7 @@ public class ApiBroadcastQueue
 
 
     @Inject
-    public ApiBroadcastQueue(ObjectMapper objectMapper, SessionHolder sessionHolder)
+    public ApiBroadcastQueue(ObjectMapper objectMapper)
     {
         this.apiWriter = objectMapper.writerFor(Api.class);
     }

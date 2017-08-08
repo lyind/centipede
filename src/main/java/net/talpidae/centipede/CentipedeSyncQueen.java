@@ -22,6 +22,7 @@ import net.talpidae.base.insect.SyncQueen;
 import net.talpidae.base.insect.config.QueenSettings;
 import net.talpidae.base.insect.message.payload.Mapping;
 import net.talpidae.centipede.event.NewMapping;
+import net.talpidae.centipede.event.ServicesModified;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
