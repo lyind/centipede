@@ -30,6 +30,7 @@ import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
 
 
+@SuppressWarnings("ServerEndpointInconsistencyInspection")
 @Slf4j
 @Singleton
 @ServerEndpoint("/")
@@ -51,6 +52,9 @@ public class CentipedeWebSocketEndPoint extends WebSocketEndpoint
     public void connect(Session session) throws IOException
     {
         log.debug("connect(): {}", session.getId());
+
+        apiCallQueue.installChainSender(session);
+
         sessionHolder.put(session);
     }
 

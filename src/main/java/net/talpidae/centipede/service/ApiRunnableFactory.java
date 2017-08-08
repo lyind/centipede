@@ -31,6 +31,7 @@ import net.talpidae.centipede.bean.service.Api;
 import net.talpidae.centipede.service.calls.CallException;
 import net.talpidae.centipede.service.calls.CallHandler;
 import net.talpidae.centipede.service.calls.Security;
+import net.talpidae.centipede.service.chain.ChainSender;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -49,6 +50,8 @@ public class ApiRunnableFactory
 
     private final static String SESSION_SECURITY_CONTEXT_KEY = ApiRunnableFactory.log.getName() + "-security-context";
 
+    private final static String SESSION_CHAIN_SENDER_KEY = ApiRunnableFactory.log.getName() + "-chain-sender";
+
     private final List<CallHandler> apiFunctionsByPhase;
 
     private final ObjectReader apiReader;
@@ -58,6 +61,21 @@ public class ApiRunnableFactory
     private final ApiBroadcastQueue apiBroadcastQueue;
 
     private final String apiBroadcastOverflow;
+
+    private final Iterable<Enqueueable<String>> queueOverflowEnqueueable = Collections.singletonList(new Enqueueable<String>()
+    {
+        @Override
+        public long getOffset()
+        {
+            return Long.MAX_VALUE;
+        }
+
+        @Override
+        public String getElement()
+        {
+            return apiBroadcastOverflow;
+        }
+    });
 
 
     @Inject
@@ -80,6 +98,27 @@ public class ApiRunnableFactory
             log.error("failed to serialize broadcast overflow message, can't create {} instance", ApiRunnableFactory.class.getName(), e);
             throw new IllegalStateException("failed to serialize broadcast overflow message: " + e.getMessage());
         }
+    }
+
+    private static ChainSender tryAcquireChainSender(Session session)
+    {
+        val chainSender = (ChainSender) session.getUserProperties().get(SESSION_CHAIN_SENDER_KEY);
+        if (chainSender != null && chainSender.acquire())
+        {
+            return chainSender;
+        }
+
+        return null;
+    }
+
+    private static AuthenticationSecurityContext getSessionSecurityContext(Session session)
+    {
+        return (AuthenticationSecurityContext) session.getUserProperties().get(SESSION_SECURITY_CONTEXT_KEY);
+    }
+
+    private static void setSessionSecurityContext(Session session, AuthenticationSecurityContext securityContext)
+    {
+        session.getUserProperties().put(SESSION_SECURITY_CONTEXT_KEY, securityContext);
     }
 
     private void setSessionEventOffset(Session session, Long offset)
@@ -143,7 +182,34 @@ public class ApiRunnableFactory
         });
     }
 
+    /**
+     * Attach the ChainSender instance to a websocket session.
+     */
+    public void attachChainSender(Session session)
+    {
+        session.getUserProperties().put(SESSION_CHAIN_SENDER_KEY, new ChainSender((chainSender, result) ->
+        {
+            if (result == null || result.isOK())
+            {
+                val next = chainSender.next();
 
+                if (next != null)
+                {
+                    sendResponse(session, (String) next.getElement(), chainSender);
+                }
+            }
+            else
+            {
+                // failed to send one element: force OVERFLOW
+                setSessionEventOffset(session, Long.MAX_VALUE);
+            }
+        }));
+    }
+
+
+    /**
+     * Flush all broadcast events for the specified session.
+     */
     private void broadcastEvents(Session session)
     {
         // restore security context
@@ -153,51 +219,33 @@ public class ApiRunnableFactory
             return;
         }
 
+        // can send right now, no other messages in flight for this session
         val offset = getSessionEventOffset(session);
         val events = apiBroadcastQueue.pollSince(offset);
         if (!events.isEmpty())
         {
-            // overflow, store offset for next poll
-            val firstEvent = events.get(0);
-            if (firstEvent.getElement() == null)
+            // try to acquire sender instance
+            val chainSender = tryAcquireChainSender(session);
+            if (chainSender != null)
             {
-                setSessionEventOffset(session, firstEvent.getOffset());
-
-                sendResponse(session, apiBroadcastOverflow, result ->
+                // overflow, store offset for next poll
+                val firstEvent = events.get(0);
+                if (firstEvent.getElement() == null)
                 {
-                    if (!result.isOK())
-                    {
-                        // failed to send overflow notification, send overflow again
-                        setSessionEventOffset(session, null);
-                    }
-                });
-            }
-            else
-            {
-                // mark all the elements as consumed, if a send fails later we just assume overflow at that point
-                val lastEvent = events.get(events.size() - 1);
-                setSessionEventOffset(session, lastEvent.getOffset());
+                    // next event is the one at the current offset
+                    setSessionEventOffset(session, firstEvent.getOffset());
 
-                // try to send out all new events
-                new ChainSender<>(events.iterator(), (chainSender, result) ->
+                    chainSender.enqueue(queueOverflowEnqueueable.iterator());
+                }
+                else
                 {
-                    if (result == null || result.isOK())
-                    {
-                        val next = chainSender.next();
+                    // mark all the elements as consumed, if a send fails later we just force an overflow later
+                    val lastEvent = events.get(events.size() - 1);
+                    setSessionEventOffset(session, lastEvent.getOffset());
 
-                        if (next != null)
-                        {
-                            chainSender.send(session, next.getElement());
-                        }
-                    }
-                    else
-                    {
-                        // failed to send one element: OVERFLOW
-                        setSessionEventOffset(session, null);
-
-                        sendResponse(session, apiBroadcastOverflow);
-                    }
-                }).start();
+                    // try to send out all new events
+                    chainSender.enqueue(events.iterator());
+                }
             }
         }
     }
@@ -262,70 +310,10 @@ public class ApiRunnableFactory
     }
 
 
-    private AuthenticationSecurityContext getSessionSecurityContext(Session session)
-    {
-        return (AuthenticationSecurityContext) session.getUserProperties().get(SESSION_SECURITY_CONTEXT_KEY);
-    }
-
-
-    private void setSessionSecurityContext(Session session, AuthenticationSecurityContext securityContext)
-    {
-        session.getUserProperties().put(SESSION_SECURITY_CONTEXT_KEY, securityContext);
-    }
-
-
     private long getSessionEventOffset(Session session)
     {
         return Optional.ofNullable(session.getUserProperties().get(SESSION_BROADCAST_OFFSET_KEY))
                 .map(v -> (Long) v)
-                .orElse(apiBroadcastQueue.pollSince(Long.MAX_VALUE).get(0).getOffset());
-    }
-
-
-    public interface ChainSenderHandler<T>
-    {
-        /**
-         * The onElementResult() method must evaluate the SendResult, call next() and send().
-         */
-        void onElementResult(ChainSender<T> chainSender, SendResult result);
-    }
-
-
-    private class ChainSender<T> implements SendHandler
-    {
-        private final Iterator<Enqueueable<T>> events;
-
-        private final ChainSenderHandler<T> sendHandler;
-
-        ChainSender(Iterator<Enqueueable<T>> events, ChainSenderHandler<T> sendHandler)
-        {
-            this.events = events;
-            this.sendHandler = sendHandler;
-        }
-
-        @Override
-        public void onResult(SendResult result)
-        {
-            sendHandler.onElementResult(this, result);
-        }
-
-        public Enqueueable<T> next()
-        {
-            return (events.hasNext()) ? events.next() : null;
-        }
-
-
-        public void send(Session session, String message)
-        {
-            sendResponse(session, message, this);
-        }
-
-        /**
-         * Start the chain.
-         */
-        public void start()
-        {
-            onResult(null);
-        }
+                .orElse(Long.MAX_VALUE);
     }
 }

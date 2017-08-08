@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import lombok.extern.slf4j.Slf4j;
 import net.talpidae.base.util.queue.ConcurrentArrayOffsetQueue;
 import net.talpidae.base.util.queue.Enqueueable;
-import net.talpidae.base.util.session.SessionHolder;
 import net.talpidae.centipede.bean.service.Api;
 
 import javax.inject.Inject;

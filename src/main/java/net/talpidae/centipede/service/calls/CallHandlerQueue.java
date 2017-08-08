@@ -58,6 +58,17 @@ public class CallHandlerQueue
     }
 
 
+    /**
+     * Attach the ChainSender instance to a websocket session.
+     * <p>
+     * The ChainSender is required to asynchronously send multiple queued messages.
+     */
+    public void installChainSender(Session session)
+    {
+        apiRunnableFactory.attachChainSender(session);
+    }
+
+
     public void enqueue(Session session, String request)
     {
         try
