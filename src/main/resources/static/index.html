@@ -46,6 +46,7 @@
                             {
                                 return !!token;
                             })
+                            .merge(app.broker(app.subject.OVERFLOW).takeUntil(app.navigate()))
                             .flatMap(function ()
                             {
                                 return app.broker(app.subject.SERVICES).takeUntil(app.navigate());
