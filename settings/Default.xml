@@ -1,4 +1,5 @@
 <code_scheme name="Default">
+  <option name="LINE_SEPARATOR" value="&#xA;" />
   <option name="JD_KEEP_EMPTY_PARAMETER" value="false" />
   <option name="JD_KEEP_EMPTY_EXCEPTION" value="false" />
   <option name="JD_KEEP_EMPTY_RETURN" value="false" />
