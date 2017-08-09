@@ -19,7 +19,8 @@
                         <img data-id="serviceStateGlyph" class="no-touch column col-3"
                             src="pic/unknown.svg">
                         <div class="column col-9">
-                            <h4  data-id="serviceName" class="panel-title text-ellipsis"></h4>
+                            <div data-id="serviceName" class="panel-title text-ellipsis"></div>
+                            <div data-id="serviceRoute" class="panel-subtitle text-ellipsis"></div>
                             <div class="divider"></div>
                             <div class="btn-group">
                                 <button data-id="serviceEnableButton" class="btn btn-sm active">Enable</button>
@@ -66,6 +67,7 @@
                                     {
                                         app.hide(added.serviceLoading);
                                         added.serviceName.innerText = service.name;
+                                        added.serviceRoute.innerText = service.route;
 
                                         // enable the right button
                                         switch (service.targetState)
