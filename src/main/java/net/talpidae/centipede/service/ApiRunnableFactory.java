@@ -100,15 +100,9 @@ public class ApiRunnableFactory
         }
     }
 
-    private static ChainSender tryAcquireChainSender(Session session)
+    private static ChainSender getChainSender(Session session)
     {
-        val chainSender = (ChainSender) session.getUserProperties().get(SESSION_CHAIN_SENDER_KEY);
-        if (chainSender != null && chainSender.acquire())
-        {
-            return chainSender;
-        }
-
-        return null;
+        return (ChainSender) session.getUserProperties().get(SESSION_CHAIN_SENDER_KEY);
     }
 
     private static AuthenticationSecurityContext getSessionSecurityContext(Session session)
@@ -187,12 +181,17 @@ public class ApiRunnableFactory
      */
     public void attachChainSender(Session session)
     {
-        session.getUserProperties().put(SESSION_CHAIN_SENDER_KEY, new ChainSender((chainSender, result) ->
+        session.getUserProperties().put(SESSION_CHAIN_SENDER_KEY, new ChainSender((chainSender, previous, result) ->
         {
-            if (result == null || result.isOK())
+            if (previous == null || result.isOK())
             {
-                val next = chainSender.next();
+                // update offset to prevent previously sent value from being considered again
+                if (previous != null)
+                {
+                    setSessionEventOffset(session, previous.getOffset());
+                }
 
+                val next = chainSender.next();
                 if (next != null)
                 {
                     sendResponse(session, (String) next.getElement(), chainSender);
@@ -219,32 +218,34 @@ public class ApiRunnableFactory
             return;
         }
 
-        // can send right now, no other messages in flight for this session
-        val offset = getSessionEventOffset(session);
-        val events = apiBroadcastQueue.pollSince(offset);
-        if (!events.isEmpty())
+        // try to acquire sender instance
+        val chainSender = getChainSender(session);
+        if (chainSender != null && chainSender.isProbablyFree())
         {
-            // try to acquire sender instance
-            val chainSender = tryAcquireChainSender(session);
-            if (chainSender != null)
+            // can send right now, no other messages in flight for this session
+            val offset = getSessionEventOffset(session);
+            val events = apiBroadcastQueue.pollSince(offset);
+            if (!events.isEmpty())
             {
                 // overflow, store offset for next poll
                 val firstEvent = events.get(0);
                 if (firstEvent.getElement() == null)
                 {
-                    // next event is the one at the current offset
-                    setSessionEventOffset(session, firstEvent.getOffset());
-
-                    chainSender.enqueue(queueOverflowEnqueueable.iterator());
+                    if (chainSender.enqueue(queueOverflowEnqueueable.iterator()))
+                    {
+                        // next event is the one at the current offset
+                        setSessionEventOffset(session, firstEvent.getOffset());
+                    }
                 }
                 else
                 {
-                    // mark all the elements as consumed, if a send fails later we just force an overflow later
-                    val lastEvent = events.get(events.size() - 1);
-                    setSessionEventOffset(session, lastEvent.getOffset());
-
                     // try to send out all new events
-                    chainSender.enqueue(events.iterator());
+                    if (chainSender.enqueue(events.iterator()))
+                    {
+                        // mark all the elements as consumed, if a send fails later we just force an overflow later
+                        val lastEvent = events.get(events.size() - 1);
+                        setSessionEventOffset(session, lastEvent.getOffset());
+                    }
                 }
             }
         }

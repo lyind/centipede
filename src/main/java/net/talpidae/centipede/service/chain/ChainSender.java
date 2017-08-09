@@ -6,17 +6,16 @@ import net.talpidae.base.util.queue.Enqueueable;
 import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
 import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 public class ChainSender implements SendHandler
 {
-    private final AtomicBoolean isFree = new AtomicBoolean(true);
-
     private final ChainSenderHandler sendHandler;
 
-    private Iterator<? extends Enqueueable> events;
+    private final AtomicReference<Iterator<? extends Enqueueable<?>>> eventsRef = new AtomicReference<>(null);
 
+    private Enqueueable<?> current = null;
 
     public ChainSender(ChainSenderHandler sendHandler)
     {
@@ -27,39 +26,51 @@ public class ChainSender implements SendHandler
     @Override
     public void onResult(SendResult result)
     {
-        val hadNext = events.hasNext();
-
-        sendHandler.onElementResult(this, result);
-
-        if (!hadNext || !result.isOK())
+        val events = eventsRef.get();
+        if (events != null)
         {
-            isFree.set(true);
+            val hadNext = events.hasNext();
+
+            sendHandler.onElementResult(this, current, result);
+
+            if (!hadNext || (result != null && !result.isOK()))
+            {
+                eventsRef.set(null);
+            }
         }
     }
 
 
     /**
-     * Acquire this ChainSender. Call before adding new message via enqueue().
+     * Return true if this sender WAS free at the time of the call, false otherwise.
      */
-    public boolean acquire()
+    public boolean isProbablyFree()
     {
-        return isFree.compareAndSet(true, false);
+        return eventsRef.get() == null;
     }
 
 
     /**
      * Enqueue the events for sending and start the chain.
      */
-    public void enqueue(Iterator<? extends Enqueueable> events)
+    public boolean enqueue(Iterator<? extends Enqueueable<?>> events)
     {
-        this.events = events;
+        if (eventsRef.compareAndSet(null, events))
+        {
+            onResult(null);
 
-        onResult(null);
+            return true;
+        }
+
+        return false;
     }
 
 
     public Enqueueable<?> next()
     {
-        return (events.hasNext()) ? events.next() : null;
+        val events = eventsRef.get();
+        return current = (events != null && events.hasNext())
+                ? events.next()
+                : null;
     }
 }
