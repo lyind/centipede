@@ -11,3 +11,25 @@
     -ms-user-select: none; /* Internet Explorer/Edge */
     user-select: none; /* Non-prefixed version, currently not supported by any browser */
 }
+
+.btn-remove {
+    background: #e06870;
+    border-color: #cb606b;
+    color: #fff;
+}
+.btn.btn-remove:focus,
+.btn.btn-remove:hover {
+    background: #c35264;
+    border-color: #c05060;
+    color: #fff;
+}
+.btn.btn-remove:active,
+.btn.btn-remove.active {
+    background: #bd4254;
+    border-color: #b43f50;
+    color: #fff;
+}
+.btn.btn-remove.loading::after {
+    border-bottom-color: #fff;
+    border-left-color: #fff;
+}

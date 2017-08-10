@@ -70,6 +70,7 @@ public class CentipedeLogic
         val mapping = newMapping.getMapping();
         val updatedService = Service.builder()
                 .name(mapping.getName())
+                .retired(false)
                 .state(State.CHANGING)
                 .route(mapping.getRoute())
                 .host(mapping.getHost())

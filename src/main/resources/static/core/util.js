@@ -209,5 +209,12 @@ app.require([],
                 }
             });
 
+            Object.defineProperty(app, "emptyToUndefined", {
+                value: function (value)
+                {
+                    return (value) ? value : undefined;
+                }
+            });
+
         })(window.app, window);
     });

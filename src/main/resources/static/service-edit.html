@@ -22,7 +22,7 @@
                     <label class="form-label" for="serviceKind">Kind</label>
                 </div>
                 <div class="col-3">
-                    <select class="form-select" id="serviceKind" data-id="serviceKind">
+                    <select class="form-select" id="serviceKind" required data-id="serviceKind">
                         <option>JAVA</option>
                         <option>NATIVE</option>
                     </select>
@@ -47,6 +47,11 @@
                 </div>
             </div>
             <br/>
+            <div class="form-group float-left">
+                <div class="">
+                    <button class="btn btn-remove" type="reset" data-id="serviceEditRetire">Remove</button>
+                </div>
+            </div>
             <div class="form-group float-right">
                 <div class="">
                     <button class="btn btn-primary" type="submit" data-id="serviceEditSave">Save</button>
@@ -143,11 +148,11 @@
                     })
                     .subscribe(nameSubject);
 
-                var kindSubject = new Rx.BehaviorSubject(model.kind || "");
+                var kindSubject = new Rx.BehaviorSubject(app.emptyToUndefined(model.kind));
                 app.eachInput(that.serviceKind)
                     .map(function (e)
                     {
-                        return e.target.value;
+                        return app.emptyToUndefined(e.target.value);
                     })
                     .subscribe(kindSubject);
                 kindSubject
@@ -206,6 +211,26 @@
 
                 // handle saving
                 app.eachClick(that.serviceEditSave)
+                    .map(function ()
+                    {
+                        return {services: [model]};
+                    })
+                    .do(app.ws) // send model to server
+                    .flatMapTo(app.broker([app.subject.SERVICES, model.name]))
+                    .takeUntil(app.navigate())
+                    .take(1)
+                    .subscribe(function ()
+                    {
+                        app.remove(DRAFT_KEY); // remove draft
+                        app.navigate("..");
+                    });
+
+                // handle retiring
+                app.eachClick(that.serviceEditRetire)
+                    .do(function ()
+                    {
+                        model.retired = true;
+                    })
                     .map(function ()
                     {
                         return {services: [model]};
