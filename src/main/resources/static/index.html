@@ -47,11 +47,10 @@
                             {
                                 return !!token;
                             })
-                            .merge(app.broker(app.subject.OVERFLOW).takeUntil(app.navigate()))
                             .flatMap(function ()
                             {
                                 return app.broker(app.subject.SERVICES).takeUntil(app.navigate());
-                            })
+                            });
 
                         var adapter = app.arrayAdapter(that.serviceTemplate, services);
 
@@ -128,8 +127,9 @@
                             });
 
                         app.broker(app.subject.TOKEN)
-                            .takeUntil(app.navigate())
                             .distinctUntilChanged()
+                            .merge(app.brokerEvent(app.subject.OVERFLOW))
+                            .takeUntil(app.navigate())
                             .map(function (token)
                             {
                                 return {services: []};
