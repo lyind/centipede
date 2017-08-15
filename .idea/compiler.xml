@@ -9,6 +9,10 @@
       <module name="base_test" target="1.8" />
       <module name="centipede_main" target="1.8" />
       <module name="centipede_test" target="1.8" />
+      <module name="git-centipede_main" target="1.8" />
+      <module name="git-centipede_test" target="1.8" />
+      <module name="modules-base_main" target="1.8" />
+      <module name="modules-base_test" target="1.8" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">

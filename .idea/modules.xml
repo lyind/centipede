@@ -2,12 +2,12 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/base.iml" filepath="$PROJECT_DIR$/.idea/modules/base.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/base_main.iml" filepath="$PROJECT_DIR$/.idea/modules/base_main.iml" group="base" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/base_test.iml" filepath="$PROJECT_DIR$/.idea/modules/base_test.iml" group="base" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/centipede.iml" filepath="$PROJECT_DIR$/.idea/modules/centipede.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/centipede_main.iml" filepath="$PROJECT_DIR$/.idea/modules/centipede_main.iml" group="centipede" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/centipede_test.iml" filepath="$PROJECT_DIR$/.idea/modules/centipede_test.iml" group="centipede" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/git-centipede.iml" filepath="$PROJECT_DIR$/.idea/modules/git-centipede.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/git-centipede_main.iml" filepath="$PROJECT_DIR$/.idea/modules/git-centipede_main.iml" group="centipede" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/git-centipede_test.iml" filepath="$PROJECT_DIR$/.idea/modules/git-centipede_test.iml" group="centipede" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/modules-base.iml" filepath="$PROJECT_DIR$/.idea/modules/modules-base.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/modules-base_main.iml" filepath="$PROJECT_DIR$/.idea/modules/modules-base_main.iml" group="base" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/modules-base_test.iml" filepath="$PROJECT_DIR$/.idea/modules/modules-base_test.iml" group="base" />
     </modules>
   </component>
 </project>
