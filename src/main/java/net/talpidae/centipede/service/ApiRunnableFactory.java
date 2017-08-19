@@ -26,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.talpidae.base.util.auth.AuthenticationSecurityContext;
 import net.talpidae.base.util.queue.Enqueueable;
-import net.talpidae.base.util.session.SessionHolder;
 import net.talpidae.centipede.bean.service.Api;
 import net.talpidae.centipede.service.calls.CallException;
 import net.talpidae.centipede.service.calls.CallHandler;
@@ -40,6 +39,8 @@ import javax.websocket.SendResult;
 import javax.websocket.Session;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 @Singleton
@@ -62,29 +63,14 @@ public class ApiRunnableFactory
 
     private final String apiBroadcastOverflow;
 
-    private final Iterable<Enqueueable<String>> queueOverflowEnqueueable = Collections.singletonList(new Enqueueable<String>()
-    {
-        @Override
-        public long getOffset()
-        {
-            return Long.MAX_VALUE;
-        }
-
-        @Override
-        public String getElement()
-        {
-            return apiBroadcastOverflow;
-        }
-    });
-
 
     @Inject
-    public ApiRunnableFactory(ObjectMapper objectMapper, SessionHolder sessionHolder, Set<CallHandler> apiFunctions, ApiBroadcastQueue apiBroadcastQueue)
+    public ApiRunnableFactory(ObjectMapper objectMapper, Set<CallHandler> apiFunctions, ApiBroadcastQueue apiBroadcastQueue)
     {
         this.apiFunctionsByPhase = new ArrayList<>(apiFunctions);
 
         // important, sort the calls by phase to allow for some order (authentication first and things like that...)
-        Collections.sort(this.apiFunctionsByPhase, Comparator.comparing(CallHandler::getPhase));
+        this.apiFunctionsByPhase.sort(Comparator.comparing(CallHandler::getPhase));
 
         this.apiReader = objectMapper.readerFor(Api.class);
         this.apiWriter = objectMapper.writerFor(Api.class);
@@ -105,19 +91,21 @@ public class ApiRunnableFactory
         return (ChainSender) session.getUserProperties().get(SESSION_CHAIN_SENDER_KEY);
     }
 
+    @SuppressWarnings("unchecked")
     private static AuthenticationSecurityContext getSessionSecurityContext(Session session)
     {
-        return (AuthenticationSecurityContext) session.getUserProperties().get(SESSION_SECURITY_CONTEXT_KEY);
+        return ((AtomicReference<AuthenticationSecurityContext>) session.getUserProperties().get(SESSION_SECURITY_CONTEXT_KEY)).get();
     }
 
+    @SuppressWarnings("unchecked")
     private static void setSessionSecurityContext(Session session, AuthenticationSecurityContext securityContext)
     {
-        session.getUserProperties().put(SESSION_SECURITY_CONTEXT_KEY, securityContext);
+        ((AtomicReference<AuthenticationSecurityContext>) session.getUserProperties().get(SESSION_SECURITY_CONTEXT_KEY)).set(securityContext);
     }
 
     private void setSessionEventOffset(Session session, Long offset)
     {
-        session.getUserProperties().put(SESSION_BROADCAST_OFFSET_KEY, offset);
+        ((AtomicLong) session.getUserProperties().get(SESSION_BROADCAST_OFFSET_KEY)).set(offset);
     }
 
     public Runnable create(Session session, String request)
@@ -163,7 +151,6 @@ public class ApiRunnableFactory
 
     private void sendResponse(Session session, String message, SendHandler sendHandler)
     {
-        log.debug("sending: " + message);
         session.getAsyncRemote().sendText(message, result ->
         {
             Optional.ofNullable(result.getException())
@@ -181,6 +168,8 @@ public class ApiRunnableFactory
      */
     public void attachChainSender(Session session)
     {
+        session.getUserProperties().put(SESSION_SECURITY_CONTEXT_KEY, new AtomicReference<AuthenticationSecurityContext>(null));
+        session.getUserProperties().put(SESSION_BROADCAST_OFFSET_KEY, new AtomicLong(Long.MAX_VALUE));
         session.getUserProperties().put(SESSION_CHAIN_SENDER_KEY, new ChainSender((chainSender, previous, result) ->
         {
             if (previous == null || result.isOK())
@@ -199,12 +188,11 @@ public class ApiRunnableFactory
             }
             else
             {
-                // failed to send one element: force OVERFLOW
+                // failed to send one element: force OVERFLOW on next poll
                 setSessionEventOffset(session, Long.MAX_VALUE);
             }
         }));
     }
-
 
     /**
      * Flush all broadcast events for the specified session.
@@ -231,7 +219,8 @@ public class ApiRunnableFactory
                 val firstEvent = events.get(0);
                 if (firstEvent.getElement() == null)
                 {
-                    if (chainSender.enqueue(queueOverflowEnqueueable.iterator()))
+                    val queueOverflowIndicator = new OverflowEnqueueableWrapper(firstEvent);
+                    if (chainSender.enqueue(Collections.singletonList(queueOverflowIndicator).iterator()))
                     {
                         // next event is the one at the current offset
                         setSessionEventOffset(session, firstEvent.getOffset());
@@ -310,11 +299,33 @@ public class ApiRunnableFactory
         sendResponse(session, result);
     }
 
-
     private long getSessionEventOffset(Session session)
     {
-        return Optional.ofNullable(session.getUserProperties().get(SESSION_BROADCAST_OFFSET_KEY))
-                .map(v -> (Long) v)
-                .orElse(Long.MAX_VALUE);
+        return ((AtomicLong) session.getUserProperties().get(SESSION_BROADCAST_OFFSET_KEY)).get();
+    }
+
+
+    private class OverflowEnqueueableWrapper implements Enqueueable<String>
+    {
+        private final Enqueueable<?> enqueueable;
+
+
+        OverflowEnqueueableWrapper(Enqueueable<?> enqueueable)
+        {
+            this.enqueueable = enqueueable;
+        }
+
+
+        @Override
+        public long getOffset()
+        {
+            return enqueueable.getOffset();
+        }
+
+        @Override
+        public String getElement()
+        {
+            return apiBroadcastOverflow;
+        }
     }
 }

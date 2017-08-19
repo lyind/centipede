@@ -71,6 +71,8 @@ public class Services implements CallHandler
                 }
 
                 eventBus.post(new ServicesModified(Collections.unmodifiableList(names)));
+
+                request.setServices(null);
             }
             else
             {
