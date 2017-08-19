@@ -101,6 +101,11 @@ public class Service
 
     private final Integer port;
 
+    /**
+     * The transition count (how many times centipede tried to reach targetState).
+     */
+    private final Integer transition;
+
 
     @JsonCreator
     public Service(@JsonProperty("generation") @ColumnName("generation") int generation,
@@ -117,7 +122,8 @@ public class Service
                    @JsonProperty("proxyPathPrefix") @ColumnName("proxyPathPrefix") String proxyPathPrefix,
                    @JsonProperty("pid") @ColumnName("pid") Long pid,
                    @JsonProperty("host") @ColumnName("host") String host,
-                   @JsonProperty("port") @ColumnName("port") Integer port)
+                   @JsonProperty("port") @ColumnName("port") Integer port,
+                   @JsonProperty("transition") @ColumnName("transition") Integer transition)
     {
         this.generation = generation;
         this.retired = retired;
@@ -134,5 +140,6 @@ public class Service
         this.pid = pid;
         this.host = host;
         this.port = port;
+        this.transition = transition;
     }
 }

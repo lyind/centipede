@@ -17,6 +17,7 @@
 
 package net.talpidae.centipede.database;
 
+import lombok.val;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.database.dao.ServiceDao;
 import org.jdbi.v3.sqlobject.CreateSqlObject;
@@ -42,6 +43,19 @@ public interface CentipedeRepository
     default void insertServiceState(Service service)
     {
         serviceDao().insertServiceState(service);
+    }
+
+
+    @Transaction
+    default void insertNextServiceTransition(Service service)
+    {
+        val transition = service.getTransition();
+        val updatedService = Service.builder()
+                .name(service.getName())
+                .transition(transition != null ? transition + 1 : 1)
+                .build();
+
+        serviceDao().insertServiceState(updatedService);
     }
 
 

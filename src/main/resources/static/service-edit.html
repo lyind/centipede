@@ -39,6 +39,15 @@
             </div>
             <div class="form-group">
                 <div class="col-3">
+                    <label class="form-label" for="serviceImage">Image</label>
+                </div>
+                <div class="col-9">
+                    <textarea class="form-input" id="serviceImage" data-id="serviceImage"
+                              placeholder="Image" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-3">
                     <label class="form-label" for="serviceArguments">Arguments</label>
                 </div>
                 <div class="col-9">
@@ -131,7 +140,7 @@
                 {
                     that.headline.innerText = "Create new Service";
                     app.setReadonly(that.serviceName, false);
-                    app.setReadonly(that.serviceKind, true);
+                    app.setReadonly(that.serviceKind, false);
                 }
                 else
                 {
@@ -180,6 +189,14 @@
                     })
                     .subscribe(vmArgumentsSubject);
 
+                var imageSubject = new Rx.BehaviorSubject(model.image || "");
+                app.eachInput(that.serviceImage)
+                    .map(function (e)
+                    {
+                        return e.target.value;
+                    })
+                    .subscribe(imageSubject);
+
                 var argumentsSubject = new Rx.BehaviorSubject(model.arguments || "");
                 app.eachInput(that.serviceArguments)
                     .map(function (e)
@@ -194,6 +211,7 @@
                         nameSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "name")),
                         kindSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "kind")),
                         vmArgumentsSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "vmArguments")),
+                        imageSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "image")),
                         argumentsSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "arguments"))
                     )
                     .takeUntil(app.navigate())
@@ -204,6 +222,7 @@
                         that.serviceName.value = model.name;
                         that.serviceKind.value = model.kind;
                         that.serviceVmArguments.value = model.vmArguments;
+                        that.serviceImage.value = model.image;
                         that.serviceArguments.value = model.arguments;
 
                         app.set(DRAFT_KEY, JSON.stringify(model));
