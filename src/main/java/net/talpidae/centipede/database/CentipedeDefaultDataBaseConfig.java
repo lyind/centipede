@@ -20,7 +20,10 @@ package net.talpidae.centipede.database;
 import com.google.inject.Singleton;
 import lombok.Getter;
 import net.talpidae.base.database.DefaultDataBaseConfig;
+import org.jdbi.v3.core.spi.JdbiPlugin;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +52,8 @@ public class CentipedeDefaultDataBaseConfig extends DefaultDataBaseConfig
     private final int idleTimeout = (int) TimeUnit.SECONDS.toMillis(45);
 
     private final Map<String, String> dataSourceProperties = new HashMap<>();
+
+    private final Collection<JdbiPlugin> extraPlugins = Collections.emptyList();
 
     public CentipedeDefaultDataBaseConfig()
     {
