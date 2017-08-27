@@ -1,8 +1,7 @@
 package net.talpidae.centipede.service.transition;
 
 import com.google.common.eventbus.EventBus;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
+
 import net.talpidae.base.insect.Queen;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
@@ -10,10 +9,14 @@ import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.util.process.ProcessUtil;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.net.InetSocketAddress;
 import java.util.Collections;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 
 import static com.google.common.base.Objects.firstNonNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
@@ -48,6 +51,13 @@ public class Down implements Transition
         int transitionCount = firstNonNull(service.getTransition(), 0);
         if (transitionCount == 0)
         {
+            // set insect out-of-service (to stop clients from connecting)
+            queen.setIsOutOfService(service.getRoute(), InetSocketAddress.createUnresolved(service.getHost(), service.getPort()), true);
+
+            setServiceStateChanging(service);
+        }
+        else if (transitionCount == 1)
+        {
             // first try to shutdown process via insect message
             val host = service.getHost();
             val port = service.getPort();
@@ -61,10 +71,8 @@ public class Down implements Transition
                 // skip sending shutdown request if no port is known
                 log.debug("can't send shutdown request to {}: host={}, port={}", service.getName(), host, port);
             }
-
-            setServiceStateChanging(service);
         }
-        else if (transitionCount == 1)
+        else if (transitionCount == 2)
         {
             if (havePid)
             {
