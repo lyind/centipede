@@ -18,11 +18,12 @@
 package net.talpidae.centipede;
 
 import com.google.common.eventbus.EventBus;
+
 import net.talpidae.base.insect.SyncQueen;
 import net.talpidae.base.insect.config.QueenSettings;
 import net.talpidae.base.insect.message.payload.Mapping;
+import net.talpidae.base.insect.state.InsectState;
 import net.talpidae.centipede.event.NewMapping;
-import net.talpidae.centipede.event.ServicesModified;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -43,9 +44,9 @@ public class CentipedeSyncQueen extends SyncQueen
 
 
     @Override
-    protected void postHandleMapping(Mapping mapping, boolean isNewMapping)
+    protected void postHandleMapping(InsectState state, Mapping mapping, boolean isNewMapping)
     {
-        super.postHandleMapping(mapping, isNewMapping);
+        super.postHandleMapping(state, mapping, isNewMapping);
 
         // update DB state
         if (isNewMapping)
