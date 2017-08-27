@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2017  Jonas Zeiger <jonas.zeiger@talpidae.net>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package net.talpidae.centipede.service.transition;
 
 import com.google.common.eventbus.EventBus;
@@ -18,13 +35,12 @@ import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
-import static com.google.common.base.Objects.firstNonNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
 
 
 @Slf4j
 @Singleton
-public class Down implements Transition
+public class TransitionDown implements Transition
 {
     private final EventBus eventBus;
 
@@ -34,21 +50,18 @@ public class Down implements Transition
 
 
     @Inject
-    public Down(EventBus eventBus, CentipedeRepository centipedeRepository, Queen queen)
+    public TransitionDown(EventBus eventBus, CentipedeRepository centipedeRepository, Queen queen)
     {
         this.eventBus = eventBus;
         this.centipedeRepository = centipedeRepository;
         this.queen = queen;
     }
 
-    public boolean transition(Service service)
+    public void apply(Service service, int transitionCount)
     {
-        centipedeRepository.insertNextServiceTransition(service);
-
         val pid = service.getPid();
         boolean havePid = service.getPid() != null && service.getPid() >= 0;
 
-        int transitionCount = firstNonNull(service.getTransition(), 0);
         if (transitionCount == 0)
         {
             // set insect out-of-service (to stop clients from connecting)
@@ -57,6 +70,11 @@ public class Down implements Transition
             setServiceStateChanging(service);
         }
         else if (transitionCount == 1)
+        {
+            // set out-of-service again, in case it was overwritten by a mapping
+            queen.setIsOutOfService(service.getRoute(), InetSocketAddress.createUnresolved(service.getHost(), service.getPort()), true);
+        }
+        else if (transitionCount == 2)
         {
             // first try to shutdown process via insect message
             val host = service.getHost();
@@ -72,7 +90,7 @@ public class Down implements Transition
                 log.debug("can't send shutdown request to {}: host={}, port={}", service.getName(), host, port);
             }
         }
-        else if (transitionCount == 2)
+        else if (transitionCount == 6)
         {
             if (havePid)
             {
@@ -81,7 +99,7 @@ public class Down implements Transition
                 ProcessUtil.terminateProcess(pid, false);
             }
         }
-        else
+        else if (transitionCount >= 9)
         {
             if (havePid)
             {
@@ -93,8 +111,6 @@ public class Down implements Transition
             // we can't do anything else, we just assume the process is dead
             setServiceStateDown(service);
         }
-
-        return true;
     }
 
 
@@ -103,7 +119,6 @@ public class Down implements Transition
         val updatedService = Service.builder()
                 .name(service.getName())
                 .state(State.CHANGING)
-                .port(-1)
                 .build();
 
         centipedeRepository.insertServiceState(updatedService);

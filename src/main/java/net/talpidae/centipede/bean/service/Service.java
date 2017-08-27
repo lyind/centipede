@@ -19,10 +19,16 @@ package net.talpidae.centipede.bean.service;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.*;
+
 import org.jdbi.v3.core.mapper.reflect.ColumnName;
 
 import java.time.OffsetDateTime;
+
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.ToString;
 
 
 /**
@@ -102,7 +108,7 @@ public class Service
     private final Integer port;
 
     /**
-     * The transition count (how many times centipede tried to reach targetState).
+     * The apply count (how many times centipede tried to reach targetState).
      */
     private final Integer transition;
 

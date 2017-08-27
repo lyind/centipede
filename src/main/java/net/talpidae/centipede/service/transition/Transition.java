@@ -5,5 +5,5 @@ import net.talpidae.centipede.bean.service.Service;
 
 public interface Transition
 {
-    boolean transition(Service service);
+    void apply(Service service, int transitionCount);
 }

@@ -18,9 +18,8 @@
 package net.talpidae.centipede.task.health;
 
 import com.google.common.eventbus.EventBus;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import net.talpidae.base.insect.SyncQueen;
+
+import net.talpidae.base.insect.Queen;
 import net.talpidae.base.insect.config.QueenSettings;
 import net.talpidae.base.insect.state.InsectState;
 import net.talpidae.centipede.bean.service.Service;
@@ -28,18 +27,26 @@ import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.ServicesModified;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 
 
 @Slf4j
 @Singleton
 public class PulseCheck implements Runnable
 {
-    private final SyncQueen syncQueen;
+    private final Queen queen;
 
     private final QueenSettings queenSettings;
 
@@ -51,9 +58,9 @@ public class PulseCheck implements Runnable
 
 
     @Inject
-    public PulseCheck(SyncQueen syncQueen, QueenSettings queenSettings, CentipedeRepository centipedeRepository, EventBus eventBus)
+    public PulseCheck(Queen queen, QueenSettings queenSettings, CentipedeRepository centipedeRepository, EventBus eventBus)
     {
-        this.syncQueen = syncQueen;
+        this.queen = queen;
         this.queenSettings = queenSettings;
         this.centipedeRepository = centipedeRepository;
         this.eventBus = eventBus;
@@ -68,15 +75,6 @@ public class PulseCheck implements Runnable
         val state = service.getState();
 
         return !State.CHANGING.equals(state) && !State.DOWN.equals(state);
-    }
-
-
-    /**
-     * Is the service in a stable state?
-     */
-    private static boolean isNotUp(Service service)
-    {
-        return !State.UP.equals(service.getState());
     }
 
 
@@ -145,7 +143,7 @@ public class PulseCheck implements Runnable
         val now = System.nanoTime();
 
         // fill state cache with insect that until recently have a pulse
-        return syncQueen.getLiveInsectState()
+        return queen.getLiveInsectState()
                 .filter(state -> (now - state.getTimestamp()) < noPulseDownThresholdNanos);
     }
 }
