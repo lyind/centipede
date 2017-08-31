@@ -108,7 +108,7 @@ public class Service
     private final Integer port;
 
     /**
-     * The apply count (how many times centipede tried to reach targetState).
+     * The transition count (how many times centipede tried to reach targetState).
      */
     private final Integer transition;
 
