@@ -20,6 +20,7 @@ package net.talpidae.centipede.database;
 import com.google.inject.Singleton;
 
 import net.talpidae.base.database.DefaultDataBaseConfig;
+import net.talpidae.base.database.ProxyDataSourceConfigurer;
 
 import org.jdbi.v3.core.spi.JdbiPlugin;
 
@@ -36,7 +37,7 @@ import lombok.Getter;
 @Getter
 public class CentipedeDefaultDataBaseConfig extends DefaultDataBaseConfig
 {
-    private final int maximumPoolSize = Math.max(4, Runtime.getRuntime().availableProcessors() / 4);
+    private final int maximumPoolSize = Math.max(3, Runtime.getRuntime().availableProcessors() / 4);
 
     private final String jdbcUrl = "jdbc:sqlite:centipede.db";
 
@@ -57,6 +58,9 @@ public class CentipedeDefaultDataBaseConfig extends DefaultDataBaseConfig
     private final Map<String, String> dataSourceProperties = new HashMap<>();
 
     private final Collection<JdbiPlugin> extraPlugins = Collections.emptyList();
+
+    private final ProxyDataSourceConfigurer proxyDataSourceConfigurer = null;
+
 
     public CentipedeDefaultDataBaseConfig()
     {
