@@ -66,8 +66,6 @@ public class TransitionDown implements Transition
         {
             // set insect out-of-service (to stop clients from connecting)
             queen.setIsOutOfService(service.getRoute(), InetSocketAddress.createUnresolved(service.getHost(), service.getPort()), true);
-
-            setServiceStateChanging(service);
         }
         else if (transitionCount == 1)
         {
@@ -114,27 +112,12 @@ public class TransitionDown implements Transition
     }
 
 
-    private void setServiceStateChanging(Service service)
-    {
-        val updatedService = Service.builder()
-                .name(service.getName())
-                .state(State.CHANGING)
-                .build();
-
-        centipedeRepository.insertServiceState(updatedService);
-
-        eventBus.post(new ServicesModified(Collections.singletonList(service.getName())));
-    }
-
-
     private void setServiceStateDown(Service service)
     {
         val updatedService = Service.builder()
                 .name(service.getName())
-                .state(State.DOWN)
                 .pid(-1L)
                 .port(-1)
-                .transition(0)
                 .build();
 
         centipedeRepository.insertServiceState(updatedService);

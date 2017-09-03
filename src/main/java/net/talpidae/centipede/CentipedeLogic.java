@@ -20,7 +20,7 @@ package net.talpidae.centipede;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.inject.Singleton;
-import lombok.val;
+
 import net.talpidae.base.util.thread.GeneralScheduler;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
@@ -28,11 +28,15 @@ import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.NewMapping;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.service.EventForwarder;
-import net.talpidae.centipede.task.health.PulseCheck;
+import net.talpidae.centipede.task.health.HealthCheck;
+import net.talpidae.centipede.task.state.StateMachine;
 
-import javax.inject.Inject;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
+
+import javax.inject.Inject;
+
+import lombok.val;
 
 
 @Singleton
@@ -48,7 +52,7 @@ public class CentipedeLogic
 
 
     @Inject
-    public CentipedeLogic(CentipedeRepository repository, EventBus eventBus, GeneralScheduler scheduler, PulseCheck pulseCheck, EventForwarder eventForwarder)
+    public CentipedeLogic(CentipedeRepository repository, EventBus eventBus, GeneralScheduler scheduler, HealthCheck pulseCheck, StateMachine stateMachine, EventForwarder eventForwarder)
     {
         this.repository = repository;
         this.eventBus = eventBus;
@@ -57,7 +61,11 @@ public class CentipedeLogic
 
         eventBus.register(this);
 
-        scheduler.scheduleWithFixedDelay(pulseCheck, 3500L, 1500L, TimeUnit.MILLISECONDS);
+        // give services already running enough time to register
+        scheduler.scheduleWithFixedDelay(pulseCheck, 4000L, 1500L, TimeUnit.MILLISECONDS);
+
+        // don't try starting services while we are still waiting for externally launched services state
+        scheduler.scheduleWithFixedDelay(stateMachine, 7000L, 1000L, TimeUnit.MILLISECONDS);
     }
 
 

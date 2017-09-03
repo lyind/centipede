@@ -22,5 +22,6 @@ public enum State
     UNKNOWN,
     DOWN,
     CHANGING,
+    OUT_OF_SERVICE,
     UP
 }

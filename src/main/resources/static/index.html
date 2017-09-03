@@ -8,7 +8,9 @@
 </h1>
 <div data-keep="fragment/profile.fragment.html"></div>
 <div>
-    <h2>Services</h2>
+    <h2>Services
+        <button data-id="createService" class="btn btn-primary icon">Create</button>
+    </h2>
     <div class="divider"></div>
     <div data-id="serviceList" class="columns">
         <div data-id="serviceTemplate" class="column col-4 col-lg-6 col-sm-10 col-xs-12" hidden="">
@@ -17,17 +19,25 @@
                     <div data-id="serviceLoading" class="loading"></div>
                     <div class="columns">
                         <img data-id="serviceStateGlyph" class="no-touch column col-3"
-                            src="pic/unknown.svg">
+                             src="pic/unknown.svg">
                         <div class="column col-9">
                             <div data-id="serviceName" class="panel-title text-ellipsis"></div>
                             <div data-id="serviceRoute" class="panel-subtitle text-ellipsis"></div>
                             <div class="divider"></div>
                             <div class="btn-group">
-                                <button data-id="serviceEnableButton" class="btn btn-sm active">Enable</button>
-                                <button data-id="serviceDisableButton" class="btn btn-sm">Disable</button>
+                                <button data-id="serviceEnableButton" class="btn btn-sm active">
+                                    On
+                                </button>
+                                <button data-id="serviceOutOfServiceButton" class="btn btn-sm">
+                                    Block
+                                </button>
+                                <button data-id="serviceDisableButton" class="btn btn-sm">Off
+                                </button>
                             </div>
                             <div class="btn-group float-right">
-                                <button data-id="serviceEditButton" class="btn btn-primary btn-sm">Configure</button>
+                                <button data-id="serviceEditButton" class="btn btn-primary btn-sm">
+                                    Config
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -66,21 +76,29 @@
                                     {
                                         app.hide(added.serviceLoading);
                                         added.serviceName.innerText = service.name;
-                                        added.serviceRoute.innerText = service.route;
+                                        added.serviceRoute.innerText = (service.route) ? service.route : '[no route]';
 
                                         // enable the right button
                                         switch (service.targetState)
                                         {
                                             case "UP":
                                                 added.serviceEnableButton.classList.add("active");
+                                                added.serviceOutOfServiceButton.classList.remove("active");
                                                 added.serviceDisableButton.classList.remove("active");
                                                 break;
                                             case "DOWN":
                                                 added.serviceEnableButton.classList.remove("active");
+                                                added.serviceOutOfServiceButton.classList.remove("active");
                                                 added.serviceDisableButton.classList.add("active");
+                                                break;
+                                            case "OUT_OF_SERVICE":
+                                                added.serviceEnableButton.classList.remove("active");
+                                                added.serviceOutOfServiceButton.classList.add("active");
+                                                added.serviceDisableButton.classList.remove("active");
                                                 break;
                                             default:
                                                 added.serviceEnableButton.classList.remove("active");
+                                                added.serviceOutOfServiceButton.classList.remove("active");
                                                 added.serviceDisableButton.classList.remove("active");
                                                 break;
                                         }
@@ -93,6 +111,9 @@
                                                 break;
                                             case "CHANGING":
                                                 stateGlyph = "changing";
+                                                break;
+                                            case "OUT_OF_SERVICE":
+                                                stateGlyph = "out-of-service";
                                                 break;
                                             case "UP":
                                                 stateGlyph = "up";
@@ -113,7 +134,25 @@
                                     .takeUntil(itemRemoved)
                                     .map(function (e)
                                     {
-                                        return {"services": [{"name": added.value, "targetState": "UP"}]};
+                                        return {
+                                            "services": [{
+                                                "name": added.value,
+                                                "targetState": "UP"
+                                            }]
+                                        };
+                                    })
+                                    .subscribe(app.ws);
+
+                                app.eachClick(added.serviceOutOfServiceButton)
+                                    .takeUntil(itemRemoved)
+                                    .map(function (e)
+                                    {
+                                        return {
+                                            "services": [{
+                                                "name": added.value,
+                                                "targetState": "OUT_OF_SERVICE"
+                                            }]
+                                        };
                                     })
                                     .subscribe(app.ws);
 
@@ -121,7 +160,12 @@
                                     .takeUntil(itemRemoved)
                                     .map(function (e)
                                     {
-                                        return {"services": [{"name": added.value, "targetState": "DOWN"}]};
+                                        return {
+                                            "services": [{
+                                                "name": added.value,
+                                                "targetState": "DOWN"
+                                            }]
+                                        };
                                     })
                                     .subscribe(app.ws);
                             });
@@ -144,6 +188,14 @@
         </script>
     </div>
     <script>
-
+        app(function (that, app)
+        {
+            app.eachClick(that.createService)
+                .takeUntil(app.navigate())
+                .subscribe(function ()
+                {
+                    app.navigate("service-edit.html");
+                });
+        });
     </script>
 </div>

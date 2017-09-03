@@ -27,11 +27,12 @@ import net.talpidae.centipede.service.transition.Transition;
 import net.talpidae.centipede.service.transition.TransitionDown;
 import net.talpidae.centipede.service.transition.TransitionUp;
 
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -40,21 +41,18 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 import static com.google.common.base.Objects.firstNonNull;
-import static net.talpidae.centipede.bean.service.State.CHANGING;
-import static net.talpidae.centipede.bean.service.State.DOWN;
-import static net.talpidae.centipede.bean.service.State.UP;
 
 
 @Slf4j
 @Singleton
 public class StateMachine implements Runnable
 {
-    private static final Set<State> STABLE_STATES = EnumSet.of(DOWN, UP);
-
     /**
      * Unsuccessful transition attempts after which we enter unknown state.
      */
-    private static final int TIMEOUT_TRANSITIONS = 30;
+    public static final int TIMEOUT_TRANSITIONS = 30;
+
+    public static final long AFTER_TIMEOUT_COOLDOWN_DELAY_MS = TimeUnit.SECONDS.toMillis(45);
 
     private final CentipedeRepository centipedeRepository;
 
@@ -84,64 +82,101 @@ public class StateMachine implements Runnable
             // we temporarily cache the target state to prevent flukes
             val txnTargetState = transactionTargetState.get(service.getName());
             val targetState = firstNonNull(txnTargetState, service.getTargetState());
-            if (STABLE_STATES.contains(targetState))
+            val state = firstNonNull(service.getState(), State.UNKNOWN);
+            switch (state)
             {
-                val state = firstNonNull(service.getState(), State.UNKNOWN);
-                switch (state)
-                {
-                    case UP:
-                        if (targetState == State.DOWN)
-                            undergoTransition(service, targetState, down);
+                case UP:
+                    if (targetState == State.DOWN)
+                        undergoTransition(service, targetState, txnTargetState, down);
 
+                    break;
+
+                case DOWN:
+                    if (targetState == State.UP || targetState == State.OUT_OF_SERVICE)
+                        undergoTransition(service, targetState, txnTargetState, up);
+
+                    break;
+
+                case CHANGING:
+                    if (targetState == State.OUT_OF_SERVICE)
+                    {
+                        undergoTransition(service, targetState, txnTargetState, up);
                         break;
+                    }
+                    // intended fall-through
 
-                    case DOWN:
-                        if (targetState == State.UP)
-                            undergoTransition(service, targetState, up);
+                case OUT_OF_SERVICE:
+                    // resume startup/shutdown
+                    switch (targetState)
+                    {
+                        case UP:
+                            undergoTransition(service, targetState, txnTargetState, up);
+                            break;
 
-                        break;
+                        case DOWN:
+                            undergoTransition(service, targetState, txnTargetState, down);
+                            break;
 
-                    case CHANGING:
-                        // resume startup/shutdown
-                        undergoTransition(service, targetState, (targetState == State.UP) ? up : down);
-                        break;
+                        default:
+                            break;
+                    }
 
-                    default:
-                        if (txnTargetState != null)
-                        {
-                            // remove pinned target state (now changes are accepted, again)
-                            transactionTargetState.remove(service.getName());
-                        }
-                        else if (targetState == State.DOWN)
-                        {
-                            undergoTransition(service, targetState, down);
-                        }
+                    break;
 
-                        break;
-                }
+                default:
+                    if (targetState == State.DOWN)
+                    {
+                        // allow to bring down service from unknown state
+                        undergoTransition(service, targetState, txnTargetState, down);
+                    }
+                    else if (txnTargetState != null)
+                    {
+                        // remove pinned target state (now changes are accepted, again)
+                        transactionTargetState.remove(service.getName());
+                    }
+
+                    break;
             }
         }
     }
 
 
-    private void undergoTransition(Service service, State targetState, Transition transition)
+    private void undergoTransition(Service service, State targetState, State txnTargetState, Transition transition)
     {
+        val name = service.getName();
+
         final int transitionCount;
-        if (service.getState() != CHANGING)
-        {
-            setServiceStateChanging(service, targetState);
-            transitionCount = 0;
-        }
-        else if (service.getTransition() >= TIMEOUT_TRANSITIONS)
+        if (service.getTransition() >= TIMEOUT_TRANSITIONS)
         {
             // timeout transition
-            centipedeRepository.insertServiceState(Service.builder()
-                    .name(service.getName())
-                    .state(State.UNKNOWN)
-                    .build());
+            val coolDownEnd = service.getTs().plus(AFTER_TIMEOUT_COOLDOWN_DELAY_MS, ChronoUnit.MILLIS);
+            if (OffsetDateTime.now().isAfter(coolDownEnd))
+            {
+                log.debug("cooldown phase for {} ended, current state: {}", name, service.getState().name());
 
-            log.warn("{} failed to transition from {} to {}", service.getName(), service.getState().name(), targetState.name());
+                centipedeRepository.insertServiceState(Service.builder()
+                        .name(service.getName())
+                        .state(State.UNKNOWN)
+                        .transition(0)
+                        .build());
+
+                transactionTargetState.remove(name);
+            }
+            else if (service.getTransition() == TIMEOUT_TRANSITIONS)
+            {
+                log.warn("{} failed to transition to target state {}", name, targetState.name());
+                centipedeRepository.insertNextServiceTransition(service);
+            }
+
             return;
+        }
+        else if (txnTargetState == null)
+        {
+            // save target state to prevent rapid modification while the service is in transition
+            transactionTargetState.put(name, targetState);
+
+            setServiceStateChanging(service);
+            transitionCount = 0;
         }
         else
         {
@@ -153,11 +188,8 @@ public class StateMachine implements Runnable
     }
 
 
-    private void setServiceStateChanging(Service service, State targetState)
+    private void setServiceStateChanging(Service service)
     {
-        // save target state to prevent rapid modification while the service is in transition
-        transactionTargetState.put(service.getName(), targetState);
-
         centipedeRepository.insertServiceState(Service.builder()
                 .name(service.getName())
                 .state(State.CHANGING)

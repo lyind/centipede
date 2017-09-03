@@ -38,13 +38,15 @@ import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 
 @Slf4j
 @Singleton
-public class PulseCheck implements Runnable
+public class HealthCheck implements Runnable
 {
     private final Queen queen;
 
@@ -58,7 +60,7 @@ public class PulseCheck implements Runnable
 
 
     @Inject
-    public PulseCheck(Queen queen, QueenSettings queenSettings, CentipedeRepository centipedeRepository, EventBus eventBus)
+    public HealthCheck(Queen queen, QueenSettings queenSettings, CentipedeRepository centipedeRepository, EventBus eventBus)
     {
         this.queen = queen;
         this.queenSettings = queenSettings;
@@ -90,22 +92,23 @@ public class PulseCheck implements Runnable
         {
             val modifiedNames = new ArrayList<String>();
 
-            getUpInsectState()
-                    .map(InsectState::getName)
-                    .map(centipedeRepository::findServiceByName)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .forEach(service ->
+            getAliveInsectInfo()
+                    .forEach(info ->
                     {
-                        upServiceNames.add(service.getName());
+                        val name = info.getService().getName();
+                        val state = info.getService().getState();
+                        val actualState = info.getInsectState().isOutOfService() ? State.OUT_OF_SERVICE : State.UP;
 
-                        if (!State.UP.equals(service.getState()))
+                        upServiceNames.add(name);
+
+                        if (!actualState.equals(state))
                         {
                             centipedeRepository.insertServiceState(Service.builder()
-                                    .name(service.getName())
-                                    .state(State.UP).build());
+                                    .name(name)
+                                    .state(actualState)
+                                    .build());
 
-                            modifiedNames.add(service.getName());
+                            modifiedNames.add(info.getService().getName());
                         }
                     });
 
@@ -116,7 +119,7 @@ public class PulseCheck implements Runnable
                     .map(centipedeRepository::findServiceByName)
                     .filter(Optional::isPresent)
                     .map(Optional::get)
-                    .filter(PulseCheck::isStableAndNotDown)
+                    .filter(HealthCheck::isStableAndNotDown)
                     .map(service -> Service.builder().name(service.getName()).state(State.DOWN).build())
                     .forEach(service ->
                     {
@@ -137,13 +140,27 @@ public class PulseCheck implements Runnable
     }
 
 
-    private Stream<InsectState> getUpInsectState()
+    private Stream<ServiceInfo> getAliveInsectInfo()
     {
         val noPulseDownThresholdNanos = TimeUnit.MILLISECONDS.toNanos(queenSettings.getPulseDelay() * 3L);
         val now = System.nanoTime();
 
         // fill state cache with insect that until recently have a pulse
         return queen.getLiveInsectState()
-                .filter(state -> (now - state.getTimestamp()) < noPulseDownThresholdNanos);
+                .filter(state -> (now - state.getTimestamp()) < noPulseDownThresholdNanos)
+                .map(state -> centipedeRepository.findServiceByName(state.getName())
+                        .map(service -> new ServiceInfo(state, service)))
+                .filter(Optional::isPresent)
+                .map(Optional::get);
+    }
+
+
+    @Getter
+    @AllArgsConstructor
+    private static class ServiceInfo
+    {
+        private final InsectState insectState;
+
+        private final Service service;
     }
 }

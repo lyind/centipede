@@ -7,7 +7,7 @@
 <h2 data-id="headline">&nbsp;</h2>
 <div class="columns">
     <div class="column col-8 col-sm-12">
-        <form class="form-horizontal">
+        <form data-id="serviceForm" class="form-horizontal">
             <!-- form input control -->
             <div class="form-group">
                 <div class="col-3">
@@ -65,6 +65,10 @@
                 <div class="">
                     <button class="btn btn-primary" type="submit" data-id="serviceEditSave">Save</button>
                     <button class="btn btn-link" type="reset" data-id="serviceEditCancel">Cancel</button>
+                    <!--
+                    <button class="btn btn-primary" type="submit" data-id="serviceEditSave">Save</button>
+                    <button class="btn btn-link" type="reset" data-id="serviceEditCancel">Cancel</button>
+                    -->
                 </div>
             </div>
         </form>
@@ -87,6 +91,7 @@
                 if (!name)
                 {
                     return Rx.Observable.of(app.get(DRAFT_KEY))
+                        .filter(function(draft) { return !!draft; })
                         .defaultIfEmpty(JSON.stringify(DEFAULT_SERVICE))
                         .map(JSON.parse)
                         .do(function (draft)
@@ -96,7 +101,7 @@
                 }
                 else
                 {
-                    // if the ID / name doesn't exit anymore we offer re-creating it
+                    // if the ID / name doesn't exist anymore we offer to re-create it
                     Rx.Observable.of(1)
                         .delay(0)
                         .takeUntil(app.navigate())
@@ -119,6 +124,7 @@
                                 .takeUntil(app.navigate())
                                 .take(1);
                         })
+                        .filter(function(draft) { return !!draft; })
                         .defaultIfEmpty(DEFAULT_SERVICE)
                         .map(Object.assign)
                         .do(function (draft)
@@ -136,6 +142,7 @@
             })
             .subscribe(function (model)
             {
+                console.log("edit: ", model);
                 if (model.isNew)
                 {
                     that.headline.innerText = "Create new Service";
@@ -229,13 +236,25 @@
                     });
 
                 // handle saving
-                app.eachClick(that.serviceEditSave)
+                //app.eachClick(that.serviceEditSave)
+                var servicesSubscription = app.broker(app.subject.SERVICES)
+                    .subscribe(function(services)
+                    {
+                        console.log("services: ", services);
+                    });
+
+                app.eachSubmit(that.serviceForm)
                     .map(function ()
                     {
+                        console.log("model: ", model);
                         return {services: [model]};
                     })
                     .do(app.ws) // send model to server
-                    .flatMapTo(app.broker([app.subject.SERVICES, model.name]))
+                    .flatMapTo(function()
+                    {
+                        console.log("save");
+                        return app.broker([app.subject.SERVICES, model.name]);
+                    })
                     .takeUntil(app.navigate())
                     .take(1)
                     .subscribe(function ()
@@ -255,7 +274,10 @@
                         return {services: [model]};
                     })
                     .do(app.ws) // send model to server
-                    .flatMapTo(app.broker([app.subject.SERVICES, model.name]))
+                    .flatMapTo(function()
+                    {
+                        return app.broker([app.subject.SERVICES, model.name]);
+                    })
                     .takeUntil(app.navigate())
                     .take(1)
                     .subscribe(function ()
