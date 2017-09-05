@@ -31,7 +31,7 @@ import static com.sun.jna.platform.win32.WinNT.PROCESS_TERMINATE;
 public class ProcessUtil
 {
     @Getter
-    private static final String systemName = System.getProperty("os.name", "unknown");
+    private static final String systemName = System.getProperty("os.name", "unknown").toLowerCase();
 
     @Getter
     private static final Platform platform = detectPlatform();
