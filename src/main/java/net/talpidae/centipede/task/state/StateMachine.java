@@ -79,63 +79,70 @@ public class StateMachine implements Runnable
     {
         for (val service : centipedeRepository.findAll())
         {
-            // we temporarily cache the target state to prevent flukes
-            val txnTargetState = transactionTargetState.get(service.getName());
-            val targetState = firstNonNull(txnTargetState, service.getTargetState());
-            val state = firstNonNull(service.getState(), State.UNKNOWN);
-            switch (state)
+            try
             {
-                case UP:
-                    if (targetState == State.DOWN)
-                        undergoTransition(service, targetState, txnTargetState, down);
+                // we temporarily cache the target state to prevent flukes
+                val txnTargetState = transactionTargetState.get(service.getName());
+                val targetState = firstNonNull(txnTargetState, service.getTargetState());
+                val state = firstNonNull(service.getState(), State.UNKNOWN);
+                switch (state)
+                {
+                    case UP:
+                        if (targetState == State.DOWN)
+                            undergoTransition(service, targetState, txnTargetState, down);
 
-                    break;
-
-                case DOWN:
-                    if (targetState == State.UP || targetState == State.OUT_OF_SERVICE)
-                        undergoTransition(service, targetState, txnTargetState, up);
-
-                    break;
-
-                case CHANGING:
-                    if (targetState == State.OUT_OF_SERVICE)
-                    {
-                        undergoTransition(service, targetState, txnTargetState, up);
                         break;
-                    }
-                    // intended fall-through
 
-                case OUT_OF_SERVICE:
-                    // resume startup/shutdown
-                    switch (targetState)
-                    {
-                        case UP:
+                    case DOWN:
+                        if (targetState == State.UP || targetState == State.OUT_OF_SERVICE)
+                            undergoTransition(service, targetState, txnTargetState, up);
+
+                        break;
+
+                    case CHANGING:
+                        if (targetState == State.OUT_OF_SERVICE)
+                        {
                             undergoTransition(service, targetState, txnTargetState, up);
                             break;
+                        }
+                        // intended fall-through
 
-                        case DOWN:
+                    case OUT_OF_SERVICE:
+                        // resume startup/shutdown
+                        switch (targetState)
+                        {
+                            case UP:
+                                undergoTransition(service, targetState, txnTargetState, up);
+                                break;
+
+                            case DOWN:
+                                undergoTransition(service, targetState, txnTargetState, down);
+                                break;
+
+                            default:
+                                break;
+                        }
+
+                        break;
+
+                    default:
+                        if (targetState == State.DOWN)
+                        {
+                            // allow to bring down service from unknown state
                             undergoTransition(service, targetState, txnTargetState, down);
-                            break;
+                        }
+                        else if (txnTargetState != null)
+                        {
+                            // remove pinned target state (now changes are accepted, again)
+                            transactionTargetState.remove(service.getName());
+                        }
 
-                        default:
-                            break;
-                    }
-
-                    break;
-
-                default:
-                    if (targetState == State.DOWN)
-                    {
-                        // allow to bring down service from unknown state
-                        undergoTransition(service, targetState, txnTargetState, down);
-                    }
-                    else if (txnTargetState != null)
-                    {
-                        // remove pinned target state (now changes are accepted, again)
-                        transactionTargetState.remove(service.getName());
-                    }
-
-                    break;
+                        break;
+                }
+            }
+            catch (Throwable e)
+            {
+                log.error("state machine error handling service: {}: {}", service.getName(), e.getMessage(), e);
             }
         }
     }
@@ -144,9 +151,10 @@ public class StateMachine implements Runnable
     private void undergoTransition(Service service, State targetState, State txnTargetState, Transition transition)
     {
         val name = service.getName();
+        val currentTransition = firstNonNull(service.getTransition(), 0);
 
         final int transitionCount;
-        if (service.getTransition() >= TIMEOUT_TRANSITIONS)
+        if (currentTransition >= TIMEOUT_TRANSITIONS)
         {
             // timeout transition
             val coolDownEnd = service.getTs().plus(AFTER_TIMEOUT_COOLDOWN_DELAY_MS, ChronoUnit.MILLIS);
@@ -162,7 +170,7 @@ public class StateMachine implements Runnable
 
                 transactionTargetState.remove(name);
             }
-            else if (service.getTransition() == TIMEOUT_TRANSITIONS)
+            else if (currentTransition == TIMEOUT_TRANSITIONS)
             {
                 log.warn("{} failed to transition to target state {}", name, targetState.name());
                 centipedeRepository.insertNextServiceTransition(service);
@@ -181,7 +189,7 @@ public class StateMachine implements Runnable
         else
         {
             centipedeRepository.insertNextServiceTransition(service);
-            transitionCount = firstNonNull(service.getTransition(), 1);
+            transitionCount = firstNonNull(currentTransition, 1);
         }
 
         transition.apply(service, transitionCount);
