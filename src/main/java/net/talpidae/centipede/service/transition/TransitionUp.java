@@ -17,7 +17,6 @@
 
 package net.talpidae.centipede.service.transition;
 
-import com.google.common.base.Strings;
 import com.google.common.eventbus.EventBus;
 
 import net.talpidae.base.insect.Queen;
@@ -30,9 +29,7 @@ import net.talpidae.centipede.task.state.StateMachine;
 import net.talpidae.centipede.util.cli.CommandLine;
 import net.talpidae.centipede.util.process.ProcessUtil;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -43,6 +40,10 @@ import javax.inject.Singleton;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static net.talpidae.centipede.util.service.ServiceUtil.hasValidPid;
+import static net.talpidae.centipede.util.service.ServiceUtil.setOutOfService;
 
 
 @Slf4j
@@ -69,13 +70,14 @@ public class TransitionUp implements Transition
     {
         try
         {
-            if (transitionCount == 0 && service.getPid() == null && service.getPid() < 0)
+            if (transitionCount == 0 && !hasValidPid(service))
             {
                 val image = service.getImage();
-                if (Strings.isNullOrEmpty(image))
+                if (isNullOrEmpty(image))
                     throw new IllegalArgumentException("image path not specified");
 
                 val imagePath = Paths.get(image);
+                val canonicalImagePath = imagePath.toAbsolutePath().normalize();
                 val arguments = new ArrayList<String>();
                 if (service.getKind() == Kind.JAVA)
                 {
@@ -85,7 +87,7 @@ public class TransitionUp implements Transition
                     arguments.add("java");
                     arguments.addAll(CommandLine.split(service.getVmArguments()));
                     arguments.add("-jar");
-                    arguments.add(service.getImage());
+                    arguments.add(canonicalImagePath.toString());
                     arguments.addAll(CommandLine.split(service.getArguments()));
 
                     // TODO Use fork library on linux
@@ -95,16 +97,19 @@ public class TransitionUp implements Transition
                     if (!Files.isExecutable(imagePath) || !Files.isRegularFile(imagePath))
                         throw new IllegalArgumentException("invalid path or not an executable file: " + image);
 
-                    arguments.add(service.getImage());
+                    arguments.add(canonicalImagePath.toString());
                     arguments.addAll(CommandLine.split(service.getArguments()));
                 }
 
                 try
                 {
+                    // TODO create file
+                    val workingDir = Files.createDirectories(Paths.get(service.getName()));
+
                     val process = new ProcessBuilder(arguments)
                             .inheritIO()
                             .redirectInput(ProcessBuilder.Redirect.PIPE)
-                            .directory(new File(service.getName()))
+                            .directory(workingDir.toFile())
                             .start();
 
                     val pid = ProcessUtil.getProcessID(process);
@@ -119,7 +124,7 @@ public class TransitionUp implements Transition
             else
             {
                 // set out-of-service state, repeat until the service is started to ensure proper operation
-                queen.setIsOutOfService(service.getRoute(), InetSocketAddress.createUnresolved(service.getHost(), service.getPort()), State.OUT_OF_SERVICE == service.getTargetState());
+                setOutOfService(queen, service, State.OUT_OF_SERVICE == service.getTargetState());
             }
         }
         catch (IllegalArgumentException e)
