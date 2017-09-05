@@ -36,9 +36,11 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 
+@Slf4j
 @Singleton
 public class CentipedeLogic
 {
@@ -66,6 +68,9 @@ public class CentipedeLogic
 
         // don't try starting services while we are still waiting for externally launched services state
         scheduler.scheduleWithFixedDelay(stateMachine, 7000L, 1000L, TimeUnit.MILLISECONDS);
+
+        // set all services to state "UNKNOWN" initially
+        overrideStateUnknown();
     }
 
 
@@ -75,17 +80,54 @@ public class CentipedeLogic
     @Subscribe
     public void onNewMapping(NewMapping newMapping)
     {
-        val mapping = newMapping.getMapping();
-        val updatedService = Service.builder()
-                .name(mapping.getName())
-                .retired(false)
-                .state(State.CHANGING)
-                .route(mapping.getRoute())
-                .host(mapping.getHost())
-                .port(mapping.getPort())
-                .build();
+        scheduler.schedule(() ->
+        {
+            try
+            {
+                val mapping = newMapping.getMapping();
+                val updatedService = Service.builder()
+                        .name(mapping.getName())
+                        .retired(false)
+                        .state(State.CHANGING)
+                        .route(mapping.getRoute())
+                        .host(mapping.getHost())
+                        .port(mapping.getPort())
+                        .build();
 
-        repository.insertServiceState(updatedService);
-        eventBus.post(new ServicesModified(Collections.singletonList(mapping.getName())));
+                repository.insertServiceState(updatedService);
+                eventBus.post(new ServicesModified(Collections.singletonList(mapping.getName())));
+            }
+            catch (Throwable e)
+            {
+                log.error("onNewMapping(): scheduled task failed: {}", e.getMessage(), e);
+            }
+        });
+    }
+
+
+    private void overrideStateUnknown()
+    {
+        scheduler.schedule(() ->
+        {
+            try
+            {
+                val names = repository.findAllNames();
+                for (val name : names)
+                {
+                    val updatedService = Service.builder()
+                            .name(name)
+                            .state(State.UNKNOWN)
+                            .build();
+
+                    repository.insertServiceState(updatedService);
+                }
+
+                eventBus.post(new ServicesModified(names));
+            }
+            catch (Throwable e)
+            {
+                log.error("overrideStateUnknown(): scheduled task failed: {}", e.getMessage(), e);
+            }
+        });
     }
 }
