@@ -37,7 +37,7 @@ import lombok.Getter;
 @Getter
 public class CentipedeDefaultDataBaseConfig extends DefaultDataBaseConfig
 {
-    private final int maximumPoolSize = Math.max(3, Runtime.getRuntime().availableProcessors() / 4);
+    private final int maximumPoolSize = 1;   // not sure if it's safe to use more on SQLite3
 
     private final String jdbcUrl = "jdbc:sqlite:centipede.db";
 
