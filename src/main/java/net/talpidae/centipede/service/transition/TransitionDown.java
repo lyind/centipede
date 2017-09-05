@@ -21,7 +21,6 @@ import com.google.common.eventbus.EventBus;
 
 import net.talpidae.base.insect.Queen;
 import net.talpidae.centipede.bean.service.Service;
-import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.util.process.ProcessUtil;
@@ -35,7 +34,8 @@ import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
+import static net.talpidae.centipede.util.service.ServiceUtil.fromService;
+import static net.talpidae.centipede.util.service.ServiceUtil.setOutOfService;
 
 
 @Slf4j
@@ -65,27 +65,26 @@ public class TransitionDown implements Transition
         if (transitionCount == 0)
         {
             // set insect out-of-service (to stop clients from connecting)
-            queen.setIsOutOfService(service.getRoute(), InetSocketAddress.createUnresolved(service.getHost(), service.getPort()), true);
+            setOutOfService(queen, service, true);
         }
         else if (transitionCount == 1)
         {
             // set out-of-service again, in case it was overwritten by a mapping
-            queen.setIsOutOfService(service.getRoute(), InetSocketAddress.createUnresolved(service.getHost(), service.getPort()), true);
+            setOutOfService(queen, service, true);
         }
         else if (transitionCount == 2)
         {
             // first try to shutdown process via insect message
-            val host = service.getHost();
-            val port = service.getPort();
-            if (!isNullOrEmpty(host) && port != null && port > 0 && port < 65536)
+            val socketAddress = fromService(service);
+            if (socketAddress != null)
             {
                 log.debug("sending shutdown request to {}", service.getName());
-                queen.sendShutdown(new InetSocketAddress(host, port));
+                queen.sendShutdown(socketAddress);
             }
             else
             {
                 // skip sending shutdown request if no port is known
-                log.debug("can't send shutdown request to {}: host={}, port={}", service.getName(), host, port);
+                log.debug("can't send shutdown request to {}: host={}, port={}", service.getName(), service.getHost(), service.getPort());
             }
         }
         else if (transitionCount == 6)
