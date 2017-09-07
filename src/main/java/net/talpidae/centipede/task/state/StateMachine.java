@@ -85,6 +85,12 @@ public class StateMachine implements Runnable
                 val txnTargetState = transactionTargetState.get(service.getName());
                 val targetState = firstNonNull(txnTargetState, service.getTargetState());
                 val state = firstNonNull(service.getState(), State.UNKNOWN);
+
+                if (state == txnTargetState)
+                {
+                    transactionTargetState.remove(service.getName());
+                }
+
                 switch (state)
                 {
                     case UP:
@@ -153,7 +159,6 @@ public class StateMachine implements Runnable
         val name = service.getName();
         val currentTransition = firstNonNull(service.getTransition(), 0);
 
-        final int transitionCount;
         if (currentTransition >= TIMEOUT_TRANSITIONS)
         {
             // timeout transition
@@ -163,7 +168,7 @@ public class StateMachine implements Runnable
                 log.debug("cooldown phase for {} ended, current state: {}", name, service.getState().name());
 
                 centipedeRepository.insertServiceState(Service.builder()
-                        .name(service.getName())
+                        .name(name)
                         .state(State.UNKNOWN)
                         .transition(0)
                         .build());
@@ -173,37 +178,37 @@ public class StateMachine implements Runnable
             else if (currentTransition == TIMEOUT_TRANSITIONS)
             {
                 log.warn("{} failed to transition to target state {}", name, targetState.name());
-                centipedeRepository.insertNextServiceTransition(service);
             }
-
-            return;
-        }
-        else if (txnTargetState == null)
-        {
-            // save target state to prevent rapid modification while the service is in transition
-            transactionTargetState.put(name, targetState);
-
-            setServiceStateChanging(service);
-            transitionCount = 0;
         }
         else
         {
-            centipedeRepository.insertNextServiceTransition(service);
-            transitionCount = firstNonNull(currentTransition, 1);
-        }
+            if (txnTargetState == null)
+            {
+                // save target state to prevent rapid modification while the service is in transition
+                transactionTargetState.put(name, targetState);
 
-        transition.apply(service, transitionCount);
+                setServiceStateChanging(service);
+            }
+            else
+            {
+                transition.apply(service, currentTransition);
+
+                centipedeRepository.insertNextServiceTransition(service);
+            }
+        }
     }
 
 
     private void setServiceStateChanging(Service service)
     {
+        val name = service.getName();
+
         centipedeRepository.insertServiceState(Service.builder()
-                .name(service.getName())
+                .name(name)
                 .state(State.CHANGING)
                 .transition(0)
                 .build());
 
-        eventBus.post(new ServicesModified(Collections.singletonList(service.getName())));
+        eventBus.post(new ServicesModified(Collections.singletonList(name)));
     }
 }

@@ -97,7 +97,9 @@ public class HealthCheck implements Runnable
                     {
                         val name = info.getService().getName();
                         val state = info.getService().getState();
-                        val actualState = info.getInsectState().isOutOfService() ? State.OUT_OF_SERVICE : State.UP;
+                        val actualState = info.getInsectState().isOutOfService()
+                                ? State.OUT_OF_SERVICE
+                                : State.UP;
 
                         upServiceNames.add(name);
 

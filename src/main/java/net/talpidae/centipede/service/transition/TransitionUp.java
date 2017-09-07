@@ -28,6 +28,7 @@ import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.task.state.StateMachine;
 import net.talpidae.centipede.util.cli.CommandLine;
 import net.talpidae.centipede.util.process.ProcessUtil;
+import net.talpidae.centipede.util.service.ServiceUtil;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,7 +43,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static net.talpidae.centipede.util.service.ServiceUtil.hasValidPid;
 import static net.talpidae.centipede.util.service.ServiceUtil.setOutOfService;
 
 
@@ -68,9 +68,9 @@ public class TransitionUp implements Transition
     @Override
     public void apply(Service service, int transitionCount)
     {
-        try
+        if (transitionCount == 0)
         {
-            if (transitionCount == 0 && !hasValidPid(service))
+            try
             {
                 val image = service.getImage();
                 if (isNullOrEmpty(image))
@@ -101,38 +101,43 @@ public class TransitionUp implements Transition
                     arguments.addAll(CommandLine.split(service.getArguments()));
                 }
 
-                try
+                val workingDir = Files.createDirectories(Paths.get(service.getName()));
+
+                log.debug("launching {} in directory {}", service.getName(), workingDir);
+                val process = new ProcessBuilder(arguments)
+                        .inheritIO()
+                        .redirectInput(ProcessBuilder.Redirect.PIPE)
+                        .directory(workingDir.toFile())
+                        .start();
+
+                final Long pid = ProcessUtil.getProcessID(process);
+                if (ServiceUtil.isValidPid(pid))
                 {
-                    // TODO create file
-                    val workingDir = Files.createDirectories(Paths.get(service.getName()));
-
-                    val process = new ProcessBuilder(arguments)
-                            .inheritIO()
-                            .redirectInput(ProcessBuilder.Redirect.PIPE)
-                            .directory(workingDir.toFile())
-                            .start();
-
-                    val pid = ProcessUtil.getProcessID(process);
-
-                    setServicePid(service, pid);
+                    log.info("successfully launched {}, pid: {}", service.getName(), pid);
                 }
-                catch (IOException e)
+                else
                 {
-                    log.error("failed to launch service {}: {}", service.getName(), e.getMessage(), e);
+                    log.error("failed to retrieve pid for {}", service.getName());
                 }
+
+                setServicePid(service, pid);
             }
-            else
+            catch (IOException e)
             {
-                // set out-of-service state, repeat until the service is started to ensure proper operation
-                setOutOfService(queen, service, State.OUT_OF_SERVICE == service.getTargetState());
+                log.error("failed to launch service {}: {}", service.getName(), e.getMessage());
+            }
+            catch (IllegalArgumentException e)
+            {
+                log.error("invalid configuration for service {}: {}", service.getName(), e.getMessage());
+
+                // permanent error, don't know how to reach state "UP"
+                setServiceTargetStateUnknown(service);
             }
         }
-        catch (IllegalArgumentException e)
+        else
         {
-            log.warn("invalid configuration for service {}: {}", service.getName(), e.getMessage());
-
-            // permanent error, don't know how to reach state "UP"
-            setServiceTargetStateUnknown(service);
+            // set out-of-service state, repeat until the service is started to ensure proper operation
+            setOutOfService(queen, service, State.OUT_OF_SERVICE == service.getTargetState());
         }
     }
 
@@ -153,7 +158,7 @@ public class TransitionUp implements Transition
     }
 
 
-    private void setServicePid(Service service, long pid)
+    private void setServicePid(Service service, Long pid)
     {
         val updatedService = Service.builder()
                 .name(service.getName())

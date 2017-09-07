@@ -25,7 +25,6 @@ import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.util.process.ProcessUtil;
 
-import java.net.InetSocketAddress;
 import java.util.Collections;
 
 import javax.inject.Inject;
@@ -35,6 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 import static net.talpidae.centipede.util.service.ServiceUtil.fromService;
+import static net.talpidae.centipede.util.service.ServiceUtil.isValidPid;
 import static net.talpidae.centipede.util.service.ServiceUtil.setOutOfService;
 
 
@@ -59,49 +59,45 @@ public class TransitionDown implements Transition
 
     public void apply(Service service, int transitionCount)
     {
+        val name = service.getName();
         val pid = service.getPid();
-        boolean havePid = service.getPid() != null && service.getPid() >= 0;
 
-        if (transitionCount == 0)
+        if (transitionCount < 10)
         {
-            // set insect out-of-service (to stop clients from connecting)
+            // force insect out-of-service (to stop clients from connecting)
             setOutOfService(queen, service, true);
-        }
-        else if (transitionCount == 1)
-        {
-            // set out-of-service again, in case it was overwritten by a mapping
-            setOutOfService(queen, service, true);
-        }
-        else if (transitionCount == 2)
-        {
-            // first try to shutdown process via insect message
-            val socketAddress = fromService(service);
-            if (socketAddress != null)
+
+            if (transitionCount == 3)
             {
-                log.debug("sending shutdown request to {}", service.getName());
-                queen.sendShutdown(socketAddress);
+                // first try to shutdown process via insect message
+                val socketAddress = fromService(service);
+                if (socketAddress != null)
+                {
+                    log.debug("sending shutdown request to {}", name);
+                    queen.sendShutdown(socketAddress);
+                }
+                else
+                {
+                    // skip sending shutdown request if no port is known
+                    log.debug("can't send shutdown request to {}: host={}, port={}", name, service.getHost(), service.getPort());
+                }
             }
-            else
+            else if (transitionCount == 7)
             {
-                // skip sending shutdown request if no port is known
-                log.debug("can't send shutdown request to {}: host={}, port={}", service.getName(), service.getHost(), service.getPort());
-            }
-        }
-        else if (transitionCount == 6)
-        {
-            if (havePid)
-            {
-                // second try to shutdown gracefully
-                log.debug("signal process about imminent shutdown {} ({})", service.getName(), pid);
-                ProcessUtil.terminateProcess(pid, false);
+                if (isValidPid(pid))
+                {
+                    // second try to shutdown gracefully
+                    log.debug("signal process about imminent shutdown {} ({})", name, pid);
+                    ProcessUtil.terminateProcess(pid, false);
+                }
             }
         }
-        else if (transitionCount >= 9)
+        else
         {
-            if (havePid)
+            if (isValidPid(pid))
             {
                 // third, try to kill process
-                log.debug("terminating process {} ({})", service.getName(), pid);
+                log.debug("terminating process {} ({})", name, pid);
                 ProcessUtil.terminateProcess(pid, true);
             }
 

@@ -72,6 +72,12 @@ public class ServiceUtil
 
     public static boolean hasValidPid(Service service)
     {
-        return service.getPid() != null && service.getPid() >= 0;
+        return isValidPid(service.getPid());
+    }
+
+
+    public static boolean isValidPid(Long pid)
+    {
+        return pid != null && pid >= 0;
     }
 }

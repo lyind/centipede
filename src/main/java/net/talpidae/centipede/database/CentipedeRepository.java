@@ -54,7 +54,7 @@ public interface CentipedeRepository
         val transition = service.getTransition();
         val updatedService = Service.builder()
                 .name(service.getName())
-                .transition(transition != null ? transition + 1 : 1)
+                .transition(transition == null ? 0 : transition + 1)
                 .build();
 
         serviceDao().insertServiceState(updatedService);
