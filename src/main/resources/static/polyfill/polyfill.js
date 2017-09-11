@@ -18,7 +18,8 @@
 
 // Centipede splitter
 app.require([
-    "polyfill/string-endswith.js"
+    "polyfill/string-endswith.js",
+    "polyfill/saveas.js"
 ],
 function()
 {

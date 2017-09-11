@@ -113,16 +113,14 @@ app.require([],
             Object.defineProperty(app, "hide", {
                 value: function (element)
                 {
-                    element.setAttribute("hidden", "");
-                    element.classList.add("hide");
+                    element.classList.add("d-hide");
                 }
             });
 
             Object.defineProperty(app, "show", {
                 value: function (element)
                 {
-                    element.removeAttribute("hidden");
-                    element.classList.remove("hide");
+                    element.classList.remove("d-hide");
                 }
             });
 
@@ -215,6 +213,5 @@ app.require([],
                     return (value) ? value : undefined;
                 }
             });
-
         })(window.app, window);
     });

@@ -1,44 +1,60 @@
 <!DOCTYPE html>
-<meta charset="utf-8"/>
+<meta charset="UTF-8"/>
 <link rel="stylesheet" href="/core/app.css">
 <title>Centipede Index</title>
 <script src="/core/app.js"></script>
+<style>
+    .service-panel {
+        padding: 1em;
+        border-left: .05rem solid #e7e9ed;
+        border-bottom: .08rem solid #e7e9ed;
+    }
+
+    .service-panel:hover {
+        background-color: #eff1fa;
+    }
+</style>
 <h1>Please enable JavaScript to use this application.
     <script>document.currentScript.parentNode.setAttribute("hidden", "");</script>
 </h1>
 <div data-keep="fragment/profile.fragment.html"></div>
 <div>
-    <h2>Services
-        <button data-id="createService" class="btn btn-primary icon">Create</button>
+    <h2>
+        <span class="hide-xs">Services</span>
+        <span class="show-xs">&#x200B;</span>
+        <div class="absolute" style="left:unset; top: 0; right: 6rem">
+            <button data-id="createService" class="btn btn-primary">Create</button>
+            <button data-id="exportServices" class="btn btn-primary">Export</button>
+            <button data-id="importServices" class="btn btn-primary">Import</button>
+        </div>
     </h2>
     <div class="divider"></div>
     <div data-id="serviceList" class="columns">
-        <div data-id="serviceTemplate" class="column col-4 col-lg-6 col-sm-10 col-xs-12" hidden="">
-            <div class="panel">
-                <div class="panel-body">
-                    <div data-id="serviceLoading" class="loading"></div>
-                    <div class="columns">
-                        <img data-id="serviceStateGlyph" class="no-touch column col-3"
-                             src="pic/unknown.svg">
-                        <div class="column col-9">
-                            <div data-id="serviceName" class="panel-title text-ellipsis"></div>
-                            <div data-id="serviceRoute" class="panel-subtitle text-ellipsis"></div>
-                            <div class="divider"></div>
-                            <div class="btn-group">
-                                <button data-id="serviceEnableButton" class="btn btn-sm active">
-                                    On
-                                </button>
-                                <button data-id="serviceOutOfServiceButton" class="btn btn-sm">
-                                    Block
-                                </button>
-                                <button data-id="serviceDisableButton" class="btn btn-sm">Off
-                                </button>
-                            </div>
-                            <div class="btn-group float-right">
-                                <button data-id="serviceEditButton" class="btn btn-primary btn-sm">
-                                    Config
-                                </button>
-                            </div>
+        <div data-id="serviceTemplate"
+             class="column col-3 col-xl-4 col-lg-4 col-md-6 col-sm-10 col-xs-12" hidden="">
+            <div class="service-panel">
+                <div data-id="serviceLoading" class="loading"></div>
+                <div class="columns">
+                    <img data-id="serviceStateGlyph" class="no-touch column col-3"
+                         src="pic/unknown.svg">
+                    <div class="column col-9">
+                        <div data-id="serviceName" class="panel-title text-ellipsis"></div>
+                        <div data-id="serviceRoute" class="panel-subtitle text-ellipsis"></div>
+                        <div class="divider"></div>
+                        <div class="btn-group">
+                            <button data-id="serviceEnableButton" class="btn circle btn-sm active">
+                                On
+                            </button>
+                            <button data-id="serviceOutOfServiceButton" class="btn circle btn-sm">
+                                Block
+                            </button>
+                            <button data-id="serviceDisableButton" class="btn circle btn-sm">Off
+                            </button>
+                        </div>
+                        <div class="btn-group float-right">
+                            <button data-id="serviceEditButton" class="btn btn-primary btn-sm">
+                                Config
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -195,6 +211,48 @@
                 .subscribe(function ()
                 {
                     app.navigate("service-edit.html");
+                });
+
+            app.eachClick(that.exportServices)
+                .takeUntil(app.navigate())
+                .map(function ()
+                {
+                    return {services: []};
+                })
+                .flatMap(function ()
+                {
+                    return app.broker(app.subject.SERVICES).take(1);
+                })
+                .flatMap(function (serviceNames)
+                {
+                    var observables = [];
+                    serviceNames.forEach(function (name)
+                    {
+                        observables.push(app.broker([app.subject.SERVICES, name])
+                            .take(1));
+                    });
+
+                    return Rx.Observable.from(observables)
+                        .mergeAll()
+                        .map(app.sanitizeService)
+                        .filter(app.isObject)
+                        .reduce(function (services, service)
+                        {
+                            services.push(service);
+                            return services;
+                        }, []);
+                })
+                .map(function (services)
+                {
+                    return new Blob([JSON.stringify(services, null, 4)], {type: "application/json"});
+                })
+                .subscribe(function (blob)
+                {
+                    var name = "services-" + window.location.hostname + "-" + (new Date().toISOString()) + ".json";
+
+                    console.log("[index] preparing snapshot for downloading: ", name);
+
+                    window.saveAs(blob, name);
                 });
         });
     </script>

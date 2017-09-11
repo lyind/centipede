@@ -19,7 +19,8 @@
 // Require custom parts for this specific app, using common parts from /core and /lib
 app.require([
     "custom/centipede-splitter.js",
-    "custom/centipede-joiner.js"
+    "custom/centipede-joiner.js",
+    "custom/centipede-service-util.js"
 ],
 function()
 {

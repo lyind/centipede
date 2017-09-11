@@ -1,26 +1,26 @@
 <!DOCTYPE html>
-<meta charset="UTF-8">
+<meta charset="UTF-8"/>
 <link rel="stylesheet" href="core/app.css">
 <script src="/core/app.js"></script>
-<div class="popover popover-left" style="position: fixed; z-index: 1; top: 1rem; right: 1rem;">
-    <button class="btn btn-lg btn-action circle" style="overflow:hidden; height: 7rem; width: 7rem;"><img class="no-touch" data-id="profileGlyph" src="../pic/user.svg"></button>
-    <div class="popover-container" style="margin-top:10rem; margin-right:-5rem;">
-        <div data-id="profileFrame" class="card text-left">
-            <div class="card-title"><h3>Profile</h3></div>
-            <div class="card-body">
-                <form data-id="profileForm" hidden="">
+<div class="popover" style="position: absolute; z-index: 20; left: unset; top: 0.2rem; right: 0.2rem">
+    <div class="btn circle" style="overflow:hidden; height: 4rem; width: 4rem"><img class="no-touch" data-id="profileGlyph" src="../pic/user.svg"></div>
+    <div class="popover-container" style="position: absolute; left: unset; height: 14rem; top: 15rem; right: -6rem; margin: unset">
+        <div data-id="profileFrame" class="card text-left" style="height: 100%">
+            <div class="card-header"><h3 data-id="profileName"></h3></div>
+            <div class="card-body" style="height: 100%">
+                <form data-id="profileForm" hidden="" style="height: 100%">
                     <label class="form-label" for="profileFormName">Username</label>
                     <div class="input-group">
-                        <div class="input-group-addon addon-lg" style="width: 4rem; padding:0; background-image: none, url('../pic/user.svg'); background-size: contain; background-repeat: no-repeat;"></div>
+                        <div class="input-group-addon addon-lg" style="width: 3rem; padding:0; background-image: none, url('../pic/user.svg'); background-size: contain; background-repeat: no-repeat;"></div>
                         <input id="profileFormName" data-id="profileFormName" tabIndex="1" type="text" class="form-input input-lg" placeholder="Username" name="name" required>
                     </div>
                     <label class="form-label" for="profileFormPassword">Password</label>
                     <div class="input-group">
-                        <div class="input-group-addon addon-lg" style="width: 4rem; padding:0; background-image: none, url('../pic/key.svg'); background-size: contain; background-repeat: no-repeat;"></div>
+                        <div class="input-group-addon addon-lg" style="width: 3rem; padding:0; background-image: none, url('../pic/key.svg'); background-size: contain; background-repeat: no-repeat;"></div>
                         <input id="profileFormPassword" data-id="profileFormPassword" tabIndex="2" type="password" class="form-input input-lg" placeholder="Password" name="password" required>
                     </div>
                     <br />
-                    <button data-id="profileSignin" type="submit" class="btn btn-primary">Signin</button>
+                    <button data-id="profileSignin" type="submit" class="btn btn-primary absolute" style="left: 1rem; bottom: 1rem">Signin</button>
                     <script>
                     app(function(that, app)
                     {
@@ -48,10 +48,10 @@
                     //# sourceURL=profile.fragment.html#1
                     </script>
                 </form>
-                <div data-id="profileInfo" hidden="">
-                    <h4 data-id="profileName"></h4>
-                    <button data-id="profileSignout" class="btn btn-primary">Logout</button>
-                    <script>
+            </div>
+            <div data-id="profileInfo" hidden="" style="height: 100%">
+                <button data-id="profileSignout" class="btn btn-primary absolute" style="left: 1rem; bottom: 1rem">Logout</button>
+                <script>
                     app(function(that, app)
                     {
                         // handle sign-out click
@@ -75,18 +75,9 @@
                             {
                                 app.setVisibility(that.parent, !!token);
                             });
-
-                        // handle login name changes
-                        app.broker(app.subject.CREDENTIALS)
-                            .takeUntil(app.navigate())
-                            .subscribe(function(credentials)
-                            {
-                                that.profileName.textContent = (credentials && credentials.name) ? credentials.name : "";
-                            });
                     });
                     //# sourceURL=profile.fragment.html#2
-                    </script>
-                </div>
+                </script>
             </div>
         </div>
     </div>
@@ -107,6 +98,15 @@
 
                 // update profile glyph
                 that.profileGlyph.src = (token) ? "../pic/admin-user.svg" : "../pic/user.svg";
+            });
+
+
+        // handle login name changes
+        app.broker(app.subject.CREDENTIALS)
+            .takeUntil(app.navigate())
+            .subscribe(function(credentials)
+            {
+                that.profileName.textContent = (credentials && credentials.name) ? credentials.name : "";
             });
     });
 

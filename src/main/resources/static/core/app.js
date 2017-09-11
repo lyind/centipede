@@ -38,7 +38,15 @@
         {
             Array.prototype.forEach.call(object.parent.querySelectorAll('*[data-id]:not([data-id=""])'), function(e)
             {
-                Object.defineProperty(object, e.getAttribute("data-id"), { value: e });
+                var id = e.getAttribute("data-id");
+                if (object.hasOwnProperty(id))
+                {
+                    console.warn("data-id attribute value occurs twice: ", id);
+                }
+                else
+                {
+                    Object.defineProperty(object, id, { value: e });
+                }
             });
         }
 
