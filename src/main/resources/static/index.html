@@ -254,6 +254,59 @@
 
                     window.saveAs(blob, name);
                 });
+
+            app.eachClick(that.importServices)
+                .takeUntil(app.navigate())
+                .flatMap(function()
+                {
+                    return app.uploadFile("application/json", false);
+                })
+                .filter(app.isNotEmpty)
+                .map(function(fileList)
+                {
+                    var file = fileList[0];
+                    console.log("importServices: importing from: ", file.name);
+                    return file;
+                })
+                .filter(function(file)
+                {
+                    if (!file.type.match("application/json"))
+                    {
+                        alert("Invalid file specified for import!");
+                        return false;
+                    }
+
+                    return true;
+                })
+                .flatMap(function (file)
+                {
+                    var reader = new FileReader();
+
+                    var onLoad = app.eachLoad(reader)
+                        .map(function(e)
+                        {
+                            return e.target.result;
+                        });
+
+                    reader.readAsText(file);
+
+                    return onLoad;
+                })
+                .map(function(text)
+                {
+                    return JSON.parse(text);
+                })
+                .filter(Array.isArray)
+                .map(function(services)
+                {
+                    services.forEach(app.sanitizeService);
+                    return services;
+                })
+                .map(function(services)
+                {
+                    return {services: services};
+                })
+                .subscribe(app.ws);
         });
     </script>
 </div>

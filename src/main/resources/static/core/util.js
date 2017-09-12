@@ -207,11 +207,24 @@ app.require([],
                 }
             });
 
-            // just a few shortcuts over using Observable.fromEvent() manually
             Object.defineProperty(app, "eachMouseOver", {
                 value: function (element)
                 {
                     return Rx.Observable.fromEvent(element, "mouseover").do(stopEventPropagation);
+                }
+            });
+
+            Object.defineProperty(app, "eachChange", {
+                value: function (element)
+                {
+                    return Rx.Observable.fromEvent(element, "change");
+                }
+            });
+
+            Object.defineProperty(app, "eachLoad", {
+                value: function (element)
+                {
+                    return Rx.Observable.fromEvent(element, "load");
                 }
             });
 
@@ -221,6 +234,48 @@ app.require([],
                     return (value) ? value : undefined;
                 }
             });
+
+            Object.defineProperty(app, "isNotEmpty", {
+                value: function (arrayValue)
+                {
+                    return !!(arrayValue && arrayValue.length);
+                }
+            });
+
+            Object.defineProperty(app, "uploadFile", {
+                value: function (accept, multiple)
+            {
+                var input = document.createElement('input');
+
+                if (accept !== undefined)
+                    input.setAttribute('accept', accept);
+
+                if (multiple)
+                    input.setAttribute('multiple','');
+
+                input.setAttribute('type', 'file');
+
+                input.style.display = 'none';
+                input.setAttribute('id', 'file-input-hidden-element')
+                var inputNode = document.body.appendChild(input);
+
+                return Rx.Observable.empty()
+                    .do(null, null, function() {
+                        // completes immediately when the observable is subscribed to
+                        inputNode.click();
+                    })
+                    .concat(app.eachChange(inputNode))
+                    .take(1)
+                    .takeUntil(app.navigate())
+                    .map(function()
+                    {
+                        return input.files;
+                    })
+                    .do(function()
+                    {
+                        document.body.removeChild(input);
+                    });
+            }});
 
         })(window.app, window);
     });
