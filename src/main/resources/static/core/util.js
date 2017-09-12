@@ -207,11 +207,20 @@ app.require([],
                 }
             });
 
+            // just a few shortcuts over using Observable.fromEvent() manually
+            Object.defineProperty(app, "eachMouseOver", {
+                value: function (element)
+                {
+                    return Rx.Observable.fromEvent(element, "mouseover").do(stopEventPropagation);
+                }
+            });
+
             Object.defineProperty(app, "emptyToUndefined", {
                 value: function (value)
                 {
                     return (value) ? value : undefined;
                 }
             });
+
         })(window.app, window);
     });
