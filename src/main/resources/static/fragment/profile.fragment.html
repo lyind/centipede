@@ -42,7 +42,6 @@
                             .distinctUntilChanged()
                             .subscribe(function(token)
                             {
-                                console.log("form visible: ", !token);
                                 app.setVisibility(that.parent, !token);
                             });
                     });
@@ -73,7 +72,6 @@
                                 .distinctUntilChanged()
                                 .subscribe(function(token)
                                 {
-                                    console.log("info visible: ", !token);
                                     app.setVisibility(that.parent, !!token);
                                 });
                         });
