@@ -8,7 +8,7 @@
         <div data-id="profileFrame" class="card text-left" style="height: 100%">
             <div class="card-header"><h3 data-id="profileName"></h3></div>
             <div class="card-body" style="height: 100%">
-                <form data-id="profileForm" hidden="" style="height: 100%">
+                <form data-id="profileForm" style="height: 100%">
                     <label class="form-label" for="profileFormName">Username</label>
                     <div class="input-group">
                         <div class="input-group-addon addon-lg" style="width: 3rem; padding:0; background-image: none, url('../pic/user.svg'); background-size: contain; background-repeat: no-repeat;"></div>
@@ -42,42 +42,44 @@
                             .distinctUntilChanged()
                             .subscribe(function(token)
                             {
+                                console.log("form visible: ", !token);
                                 app.setVisibility(that.parent, !token);
                             });
                     });
                     //# sourceURL=profile.fragment.html#1
                     </script>
                 </form>
-            </div>
-            <div data-id="profileInfo" hidden="" style="height: 100%">
-                <button data-id="profileSignout" class="btn btn-primary absolute" style="left: 1rem; bottom: 1rem">Logout</button>
-                <script>
-                    app(function(that, app)
-                    {
-                        // handle sign-out click
-                        app.eachClick(that.profileSignout)
-                            .takeUntil(app.navigate())
-                            .flatMap(function(e) { return app.broker(app.subject.TOKEN).take(1); })
-                            .map(function(token)
-                            {
-                                return { credentials: {}, token: null };
-                            })
-                            .subscribe(function(signoutMessage)
-                            {
-                                app.ws(signoutMessage);
-                            });
+                <div data-id="profileInfo" style="height: 100%">
+                    <button data-id="profileSignout" class="btn btn-primary absolute" style="left: 1rem; bottom: 1rem">Logout</button>
+                    <script>
+                        app(function(that, app)
+                        {
+                            // handle sign-out click
+                            app.eachClick(that.profileSignout)
+                                .takeUntil(app.navigate())
+                                .flatMap(function(e) { return app.broker(app.subject.TOKEN).take(1); })
+                                .map(function(token)
+                                {
+                                    return { credentials: {}, token: null };
+                                })
+                                .subscribe(function(signoutMessage)
+                                {
+                                    app.ws(signoutMessage);
+                                });
 
-                        // handle token values
-                        app.broker(app.subject.TOKEN)
-                            .takeUntil(app.navigate())
-                            .distinctUntilChanged()
-                            .subscribe(function(token)
-                            {
-                                app.setVisibility(that.parent, !!token);
-                            });
-                    });
-                    //# sourceURL=profile.fragment.html#2
-                </script>
+                            // handle token values
+                            app.broker(app.subject.TOKEN)
+                                .takeUntil(app.navigate())
+                                .distinctUntilChanged()
+                                .subscribe(function(token)
+                                {
+                                    console.log("info visible: ", !token);
+                                    app.setVisibility(that.parent, !!token);
+                                });
+                        });
+                        //# sourceURL=profile.fragment.html#2
+                    </script>
+                </div>
             </div>
         </div>
     </div>
