@@ -37,7 +37,7 @@ import lombok.ToString;
 @Getter
 @EqualsAndHashCode
 @ToString
-@Builder
+@Builder(toBuilder = true)
 public class Service
 {
     /**

@@ -1,0 +1,20 @@
+[
+    {
+        "name": "demo-slave1234",
+        "targetState": "UP",
+        "kind": "JAVA",
+        "vmArguments": "",
+        "image": "demo-slave-1-all.jar",
+        "arguments": "--insect.name demo-slave1234 --insect.slave.remote 127.0.0.1:13300",
+        "route": "demo"
+    },
+    {
+        "name": "demo-slave9",
+        "targetState": "DOWN",
+        "kind": "JAVA",
+        "vmArguments": "",
+        "image": "demo-slave-1-all.jar",
+        "arguments": "--insect.name demo-slave9 --insect.slave.remote 127.0.0.1:13300",
+        "route": "demo"
+    }
+]

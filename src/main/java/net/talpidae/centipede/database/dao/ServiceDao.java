@@ -65,6 +65,11 @@ public interface ServiceDao
             + "ORDER BY name ASC")
     List<String> findAllNames();
 
+    @SqlQuery("SELECT DISTINCT name\n"
+            + "FROM service\n"
+            + "ORDER BY name ASC")
+    List<String> findAllNamesIncludingRetired();
+
     @RegisterConstructorMapper(Service.class)
     @SqlQuery("SELECT generation,\n"
             + "  name,\n"
@@ -109,7 +114,7 @@ public interface ServiceDao
             + "  transition\n"
             + ")\n"
             + "  SELECT\n"
-            + "    ifnull(generation, 0) + 1 AS generation,\n"
+            + "    ifnull(maxGeneration, 0) + 1 AS generation,\n"
             + "    ifnull(MAX(:name), :name) AS name,\n" // trick to always get a row returned
             + "    ifnull(:retired, retired) AS retired,\n"
             + "    ifnull(state, 'UNKNOWN'),\n"
@@ -128,9 +133,15 @@ public interface ServiceDao
             + "    SELECT *, MAX(generation)\n"
             + "    FROM service\n"
             + "    WHERE name = :name\n"
+            + "      AND NOT retired\n"
             + "    GROUP BY name\n"
-            + "  ) AS snapshot\n"
-            + "  WHERE NOT retired")
+            + "  ) AS snapshot,\n"
+            + "  (\n"
+            + "    SELECT MAX(generation) AS maxGeneration\n"
+            + "    FROM service\n"
+            + "    WHERE name = :name\n"
+            + "    GROUP BY name\n"
+            + "  ) AS maxHistoryGeneration")
     void insertServiceConfiguration(@BindBean Service service);
 
     @SqlUpdate("INSERT INTO service (\n"

@@ -24,7 +24,6 @@ import com.google.inject.Singleton;
 import net.talpidae.base.event.ServerShutdown;
 import net.talpidae.base.event.ServerStarted;
 import net.talpidae.base.insect.Queen;
-import net.talpidae.base.insect.message.payload.Shutdown;
 import net.talpidae.base.util.thread.GeneralScheduler;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
@@ -33,6 +32,7 @@ import net.talpidae.centipede.event.NewMapping;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.service.EventForwarder;
 import net.talpidae.centipede.task.health.HealthCheck;
+import net.talpidae.centipede.task.init.InitTask;
 import net.talpidae.centipede.task.state.StateMachine;
 
 import java.io.IOException;
@@ -65,7 +65,14 @@ public class CentipedeLogic
 
 
     @Inject
-    public CentipedeLogic(CentipedeRepository repository, EventBus eventBus, GeneralScheduler scheduler, HealthCheck pulseCheck, StateMachine stateMachine, EventForwarder eventForwarder, Queen queen)
+    public CentipedeLogic(CentipedeRepository repository,
+                          EventBus eventBus,
+                          GeneralScheduler scheduler,
+                          HealthCheck pulseCheck,
+                          StateMachine stateMachine,
+                          EventForwarder eventForwarder,
+                          Queen queen,
+                          InitTask initTask)
     {
         this.repository = repository;
         this.eventBus = eventBus;
@@ -76,6 +83,9 @@ public class CentipedeLogic
         this.queen = queen;
 
         eventBus.register(this);
+
+        // initialize service database immediately
+        scheduler.schedule(initTask);
     }
 
 

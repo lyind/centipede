@@ -21,7 +21,6 @@ import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.database.dao.ServiceDao;
 
 import org.jdbi.v3.sqlobject.CreateSqlObject;
-import org.jdbi.v3.sqlobject.transaction.Transaction;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,21 +33,19 @@ public interface CentipedeRepository
     @CreateSqlObject
     ServiceDao serviceDao();
 
-    @Transaction
+
     default void insertServiceConfiguration(Service service)
     {
         serviceDao().insertServiceConfiguration(service);
     }
 
 
-    @Transaction
     default void insertServiceState(Service service)
     {
         serviceDao().insertServiceState(service);
     }
 
 
-    @Transaction
     default void insertNextServiceTransition(Service service)
     {
         val transition = service.getTransition();
@@ -61,21 +58,23 @@ public interface CentipedeRepository
     }
 
 
-    @Transaction
     default Optional<Service> findServiceByName(String name)
     {
         return Optional.ofNullable(serviceDao().findByName(name));
     }
 
-    @Transaction
     default List<Service> findAll()
     {
         return serviceDao().findAll();
     }
 
-    @Transaction
     default List<String> findAllNames()
     {
         return serviceDao().findAllNames();
+    }
+
+    default List<String> findAllNamesIncludingRetired()
+    {
+        return serviceDao().findAllNamesIncludingRetired();
     }
 }
