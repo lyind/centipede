@@ -29,7 +29,7 @@
                     </select>
                 </div>
             </div>
-            <div class="form-group" data-id="serviceVmArgumentsGroup">
+            <div class="form-group d-hide" data-id="serviceVmArgumentsGroup">
                 <div class="col-3">
                     <label class="form-label" for="serviceVmArguments">VM Arguments</label>
                 </div>
@@ -153,14 +153,12 @@
                 {
                     that.headline.innerText = "Create new Service";
                     app.setReadonly(that.serviceName, false);
-                    app.setReadonly(that.serviceKind, false);
                     app.hide(that.serviceEditRetire);
                 }
                 else
                 {
                     that.headline.innerText = "Edit " + model.name;
                     app.setReadonly(that.serviceName, true);
-                    app.setReadonly(that.serviceKind, true);
                 }
 
                 var nameSubject = new Rx.BehaviorSubject(model.name || "");
@@ -248,7 +246,11 @@
                     .do(app.ws) // send model to server
                     .flatMap(function ()
                     {
-                        return app.broker([app.subject.SERVICES, model.name]);
+                        return app.broker(app.subject.SERVICES)
+                            .map(function(services)
+                            {
+                                return services.indexOf(model.name) < 0;
+                            });
                     })
                     .takeUntil(app.navigate())
                     .take(1)
