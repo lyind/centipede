@@ -21,6 +21,10 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.inject.Singleton;
 
+import net.talpidae.base.event.ServerShutdown;
+import net.talpidae.base.event.ServerStarted;
+import net.talpidae.base.insect.Queen;
+import net.talpidae.base.insect.message.payload.Shutdown;
 import net.talpidae.base.util.thread.GeneralScheduler;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
@@ -31,6 +35,7 @@ import net.talpidae.centipede.service.EventForwarder;
 import net.talpidae.centipede.task.health.HealthCheck;
 import net.talpidae.centipede.task.state.StateMachine;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
@@ -52,25 +57,41 @@ public class CentipedeLogic
 
     private final EventForwarder eventForwarder;
 
+    private final HealthCheck pulseCheck;
+
+    private final StateMachine stateMachine;
+
+    private final Queen queen;
+
 
     @Inject
-    public CentipedeLogic(CentipedeRepository repository, EventBus eventBus, GeneralScheduler scheduler, HealthCheck pulseCheck, StateMachine stateMachine, EventForwarder eventForwarder)
+    public CentipedeLogic(CentipedeRepository repository, EventBus eventBus, GeneralScheduler scheduler, HealthCheck pulseCheck, StateMachine stateMachine, EventForwarder eventForwarder, Queen queen)
     {
         this.repository = repository;
         this.eventBus = eventBus;
         this.scheduler = scheduler;
         this.eventForwarder = eventForwarder;
+        this.pulseCheck = pulseCheck;
+        this.stateMachine = stateMachine;
+        this.queen = queen;
 
         eventBus.register(this);
+    }
+
+
+    @Subscribe
+    public void onServerStarted(ServerStarted started)
+    {
+        queen.run();
+
+        // set all services to state "UNKNOWN" initially
+        overrideStateUnknown();
 
         // give services already running enough time to register
         scheduler.scheduleWithFixedDelay(pulseCheck, 4000L, 1500L, TimeUnit.MILLISECONDS);
 
         // don't try starting services while we are still waiting for externally launched services state
         scheduler.scheduleWithFixedDelay(stateMachine, 7000L, 1000L, TimeUnit.MILLISECONDS);
-
-        // set all services to state "UNKNOWN" initially
-        overrideStateUnknown();
     }
 
 
@@ -102,6 +123,20 @@ public class CentipedeLogic
                 log.error("onNewMapping(): scheduled task failed: {}", e.getMessage(), e);
             }
         });
+    }
+
+
+    @Subscribe
+    public void onServerShutdown(ServerShutdown shutdown)
+    {
+        try
+        {
+            queen.close();
+        }
+        catch (IOException e)
+        {
+            // never happens
+        }
     }
 
 

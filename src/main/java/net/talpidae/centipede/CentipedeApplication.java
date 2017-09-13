@@ -45,8 +45,6 @@ public class CentipedeApplication implements Application
 
     private final QueenSettings queenSettings;
 
-    private final Queen queen;
-
     private final CentipedeLogic centipedeLogic;
 
     private final CentipedeRootHandlerWrapper rootHandlerWrapper;
@@ -56,14 +54,12 @@ public class CentipedeApplication implements Application
     public CentipedeApplication(ServerConfig serverConfig,
                                 Server server,
                                 QueenSettings queenSettings,
-                                Queen queen,
                                 CentipedeLogic centipedeLogic,
                                 CentipedeRootHandlerWrapper rootHandlerWrapper)
     {
         this.serverConfig = serverConfig;
         this.server = server;
         this.queenSettings = queenSettings;
-        this.queen = queen;
         this.centipedeLogic = centipedeLogic;
         this.rootHandlerWrapper = rootHandlerWrapper;
     }
@@ -86,23 +82,8 @@ public class CentipedeApplication implements Application
             log.info("server started on {}", bindAddress.toString());
 
             queenSettings.setBindAddress(bindAddress);
-            try
-            {
-                queen.run();
 
-                server.waitForShutdown();
-            }
-            finally
-            {
-                try
-                {
-                    queen.close();
-                }
-                catch (IOException e)
-                {
-                    // never happens
-                }
-            }
+            server.waitForShutdown();
         }
         catch (ServletException e)
         {
