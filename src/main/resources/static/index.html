@@ -206,15 +206,13 @@
     <script>
         app(function (that, app)
         {
-            app.eachClick(that.createService)
-                .takeUntil(app.navigate())
+            app.eachClickUntilNavigate(that.createService)
                 .subscribe(function ()
                 {
                     app.navigate("service-edit.html");
                 });
 
-            app.eachClick(that.exportServices)
-                .takeUntil(app.navigate())
+            app.eachClickUntilNavigate(that.exportServices)
                 .map(function ()
                 {
                     return {services: []};
@@ -255,8 +253,7 @@
                     window.saveAs(blob, name);
                 });
 
-            app.eachClick(that.importServices)
-                .takeUntil(app.navigate())
+            app.eachClickUntilNavigate(that.importServices)
                 .flatMap(function()
                 {
                     return app.uploadFile("application/json", false);

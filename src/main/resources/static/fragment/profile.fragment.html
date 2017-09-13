@@ -54,8 +54,7 @@
                         app(function(that, app)
                         {
                             // handle sign-out click
-                            app.eachClick(that.profileSignout)
-                                .takeUntil(app.navigate())
+                            app.eachClickUntilNavigate(that.profileSignout)
                                 .flatMap(function(e) { return app.broker(app.subject.TOKEN).take(1); })
                                 .map(function(token)
                                 {

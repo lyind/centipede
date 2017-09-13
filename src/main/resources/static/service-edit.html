@@ -70,10 +70,6 @@
                     </button>
                     <button class="btn btn-link" type="reset" data-id="serviceEditCancel">Cancel
                     </button>
-                    <!--
-                    <button class="btn btn-primary" type="submit" data-id="serviceEditSave">Save</button>
-                    <button class="btn btn-link" type="reset" data-id="serviceEditCancel">Cancel</button>
-                    -->
                 </div>
             </div>
         </form>
@@ -168,20 +164,10 @@
                 }
 
                 var nameSubject = new Rx.BehaviorSubject(model.name || "");
-                app.eachInput(that.serviceName)
-                    .map(function (e)
-                    {
-                        return e.target.value;
-                    })
-                    .subscribe(nameSubject);
+                app.eachInputValue(that.serviceName).subscribe(nameSubject);
 
                 var kindSubject = new Rx.BehaviorSubject(app.emptyToUndefined(model.kind));
-                app.eachInput(that.serviceKind)
-                    .map(function (e)
-                    {
-                        return app.emptyToUndefined(e.target.value);
-                    })
-                    .subscribe(kindSubject);
+                app.eachInputValue(that.serviceKind).map(app.emptyToUndefined).subscribe(kindSubject);
                 kindSubject
                     .asObservable()
                     .takeUntil(app.navigate())
@@ -200,28 +186,13 @@
 
                 that.serviceVmArguments.value = model.vmArguments || "";
                 var vmArgumentsSubject = new Rx.BehaviorSubject(model.vmArguments || "");
-                app.eachInput(that.serviceVmArguments)
-                    .map(function (e)
-                    {
-                        return e.target.value;
-                    })
-                    .subscribe(vmArgumentsSubject);
+                app.eachInputValue(that.serviceVmArguments).subscribe(vmArgumentsSubject);
 
                 var imageSubject = new Rx.BehaviorSubject(model.image || "");
-                app.eachInput(that.serviceImage)
-                    .map(function (e)
-                    {
-                        return e.target.value;
-                    })
-                    .subscribe(imageSubject);
+                app.eachInputValue(that.serviceImage).subscribe(imageSubject);
 
                 var argumentsSubject = new Rx.BehaviorSubject(model.arguments || "");
-                app.eachInput(that.serviceArguments)
-                    .map(function (e)
-                    {
-                        return e.target.value;
-                    })
-                    .subscribe(argumentsSubject);
+                app.eachInputValue(that.serviceArguments).subscribe(argumentsSubject);
 
                 // handle changes (auto-save if model.isNew == true)
                 Rx.Observable.empty()
@@ -246,16 +217,6 @@
                         app.set(DRAFT_KEY, JSON.stringify(model));
                     });
 
-                // handle saving
-                //app.eachClick(that.serviceEditSave)
-                /*
-                var servicesSubscription = app.broker(app.subject.SERVICES)
-                    .subscribe(function(services)
-                    {
-                        console.log("services: ", services);
-                    });
-                */
-
                 app.eachSubmit(that.serviceForm)
                     .map(function ()
                     {
@@ -275,7 +236,7 @@
                     });
 
                 // handle retiring
-                app.eachClick(that.serviceEditRetire)
+                app.eachClickUntilNavigate(that.serviceEditRetire)
                     .do(function ()
                     {
                         model.retired = true;
@@ -299,7 +260,7 @@
             });
 
         // cancel
-        app.eachClick(that.serviceEditCancel)
+        app.eachClickUntilNavigate(that.serviceEditCancel)
             .subscribe(function ()
             {
                 app.remove(DRAFT_KEY); // remove draft
