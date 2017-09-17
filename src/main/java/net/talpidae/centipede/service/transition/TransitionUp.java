@@ -122,7 +122,7 @@ public class TransitionUp implements Transition
 
                 val workingDir = Files.createDirectories(Paths.get(service.getName()));
 
-                log.debug("launching {} in directory {}", service.getName(), workingDir);
+                log.debug("launching in directory {}: {} {}", workingDir, service.getName(), arguments);
                 val process = new ProcessBuilder(arguments)
                         .inheritIO()
                         .redirectInput(ProcessBuilder.Redirect.PIPE)
