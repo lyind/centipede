@@ -1,20 +1,22 @@
-[
-    {
-        "name": "demo-slave1234",
-        "targetState": "UP",
-        "kind": "JAVA",
-        "vmArguments": "",
-        "image": "demo-slave-1-all.jar",
-        "arguments": "--insect.name demo-slave1234 --insect.slave.remote 127.0.0.1:13300",
-        "route": "demo"
+{
+    "environment": {
+        "DEMO_SLAVE_IMAGE": "demo-slave-1-all.jar",
+        "INSECT_SLAVE_ARGS": "--server.host 0.0.0.0 --insect.name ${INSECT_NAME} --insect.slave.remote ${QUEEN_REMOTE}"
     },
-    {
-        "name": "demo-slave9",
-        "targetState": "DOWN",
-        "kind": "JAVA",
-        "vmArguments": "",
-        "image": "demo-slave-1-all.jar",
-        "arguments": "--insect.name demo-slave9 --insect.slave.remote 127.0.0.1:13300",
-        "route": "demo"
-    }
-]
+    "initialServices": [
+        {
+            "name": "demo-slave1234",
+            "targetState": "UP",
+            "kind": "JAVA",
+            "image": "${DEMO_SLAVE_IMAGE}",
+            "arguments": "${INSECT_SLAVE_ARGS}"
+        },
+        {
+            "name": "demo-slave9",
+            "targetState": "DOWN",
+            "kind": "JAVA",
+            "image": "${DEMO_SLAVE_IMAGE}",
+            "arguments": "${INSECT_SLAVE_ARGS}"
+        }
+    ]
+}

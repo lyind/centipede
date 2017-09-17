@@ -26,6 +26,7 @@ import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.service.transition.Transition;
 import net.talpidae.centipede.service.transition.TransitionDown;
 import net.talpidae.centipede.service.transition.TransitionUp;
+import net.talpidae.centipede.util.service.ServiceUtil;
 
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
@@ -79,16 +80,17 @@ public class StateMachine implements Runnable
     {
         for (val service : centipedeRepository.findAll())
         {
+            val name = service.getName();
             try
             {
                 // we temporarily cache the target state to prevent flukes
-                val txnTargetState = transactionTargetState.get(service.getName());
+                val txnTargetState = transactionTargetState.get(name);
                 val targetState = firstNonNull(txnTargetState, service.getTargetState());
                 val state = firstNonNull(service.getState(), State.UNKNOWN);
 
                 if (state == txnTargetState)
                 {
-                    transactionTargetState.remove(service.getName());
+                    transactionTargetState.remove(name);
                 }
 
                 switch (state)
@@ -132,10 +134,10 @@ public class StateMachine implements Runnable
                         break;
 
                     default:
-                        if (targetState == State.DOWN)
+                        if (ServiceUtil.hasValidPid(service))
                         {
                             // allow to bring down service from unknown state
-                            undergoTransition(service, targetState, txnTargetState, down);
+                            undergoTransition(service, targetState, null, down);
                         }
                         else if (txnTargetState != null)
                         {
@@ -165,7 +167,7 @@ public class StateMachine implements Runnable
             val coolDownEnd = service.getTs().plus(AFTER_TIMEOUT_COOLDOWN_DELAY_MS, ChronoUnit.MILLIS);
             if (OffsetDateTime.now().isAfter(coolDownEnd))
             {
-                log.debug("cooldown phase for {} ended, current state: {}", name, service.getState().name());
+                log.debug("cool-down phase for {} ended, current state: {}", name, service.getState().name());
 
                 centipedeRepository.insertServiceState(Service.builder()
                         .name(name)
@@ -173,7 +175,15 @@ public class StateMachine implements Runnable
                         .transition(0)
                         .build());
 
-                transactionTargetState.remove(name);
+                if (ServiceUtil.hasValidPid(service))
+                {
+                    log.debug("ensuring safe shutdown of failed service: {}", name);
+                    transactionTargetState.put(name, State.DOWN);
+                }
+                else
+                {
+                    transactionTargetState.remove(name);
+                }
             }
             else if (currentTransition == TIMEOUT_TRANSITIONS)
             {

@@ -17,16 +17,10 @@
 
 package net.talpidae.centipede.task.init;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-
+import net.talpidae.centipede.bean.configuration.Configuration;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.database.CentipedeRepository;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.Collections;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -35,8 +29,6 @@ import jersey.repackaged.com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
-import static com.google.common.base.Objects.firstNonNull;
-
 
 /**
  * Initialize service database from init.json in the working directory.
@@ -44,68 +36,50 @@ import static com.google.common.base.Objects.firstNonNull;
 @Slf4j
 public class InitTask implements Runnable
 {
-    private final static String INITIAL_SERVICES_CONFIG_FILE_NAME = "init.json";
-
     private final CentipedeRepository centipedeRepository;
 
-    private final ObjectReader serviceReader;
+    private final Configuration config;
 
 
     @Inject
-    public InitTask(CentipedeRepository centipedeRepository, ObjectMapper objectMapper)
+    public InitTask(CentipedeRepository centipedeRepository, Configuration config)
     {
         this.centipedeRepository = centipedeRepository;
-        this.serviceReader = objectMapper.readerFor(new TypeReference<List<Service>>() {});
+        this.config = config;
     }
 
     @Override
     public void run()
     {
-        try
+        final List<Service> initialServices = config.getInitialServices();
+
+        val existingServiceNames = Sets.newHashSet(centipedeRepository.findAllNamesIncludingRetired());
+
+        log.debug("found {} initial service definitions", initialServices.size());
+
+        int skippedCount = 0;
+        for (Service service : initialServices)
         {
-            final List<Service> initialServices;
+            if (existingServiceNames.contains(service.getName()))
+            {
+                ++skippedCount;
+                continue;
+            }
+
+            val sanitizedService = sanitizeService(service);
             try
             {
-                initialServices = firstNonNull(serviceReader.readValue(new File(INITIAL_SERVICES_CONFIG_FILE_NAME)), Collections.emptyList());
+                centipedeRepository.insertServiceConfiguration(sanitizedService);
+                log.debug("added service: {}", sanitizedService.getName());
             }
-            catch (FileNotFoundException e)
+            catch (Exception e)
             {
-                log.warn("no {} in working directory, not importing initial services", INITIAL_SERVICES_CONFIG_FILE_NAME);
-                return;
+                log.error("failed to add initial service: {}: {}", service.getName(), e.getMessage());
+                ++skippedCount;
             }
-
-            val existingServiceNames = Sets.newHashSet(centipedeRepository.findAllNamesIncludingRetired());
-
-            log.debug("found {} initial service definitions", initialServices.size());
-
-            int skippedCount = 0;
-            for (Service service : initialServices)
-            {
-                if (existingServiceNames.contains(service.getName()))
-                {
-                    ++skippedCount;
-                    continue;
-                }
-
-                val sanitizedService = sanitizeService(service);
-                try
-                {
-                    centipedeRepository.insertServiceConfiguration(sanitizedService);
-                    log.debug("added service: {}", sanitizedService.getName());
-                }
-                catch (Exception e)
-                {
-                    log.error("failed to add initial service: {}: {}", service.getName(), e.getMessage());
-                    ++skippedCount;
-                }
-            }
-
-            log.debug("addded {} services, skipped {}", initialServices.size() - skippedCount, skippedCount);
         }
-        catch (Throwable t)
-        {
-            log.error("failed to load initial services from {}: {}", INITIAL_SERVICES_CONFIG_FILE_NAME, t.getMessage());
-        }
+
+        log.debug("addded {} services, skipped {}", initialServices.size() - skippedCount, skippedCount);
     }
 
 

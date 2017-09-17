@@ -38,7 +38,7 @@ public class CommandLine
      * @return The command line broken into a list of strings. An empty or null commandLine
      * parameter results in a zero sized array
      */
-    public static Collection<String> split(final String commandLine)
+    public static List<String> split(final String commandLine)
     {
         if (commandLine == null || commandLine.length() == 0)
         {

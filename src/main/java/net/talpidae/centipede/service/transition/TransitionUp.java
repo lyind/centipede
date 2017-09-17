@@ -17,6 +17,7 @@
 
 package net.talpidae.centipede.service.transition;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 
 import net.talpidae.base.insect.Queen;
@@ -27,6 +28,8 @@ import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.task.state.StateMachine;
 import net.talpidae.centipede.util.cli.CommandLine;
+import net.talpidae.centipede.util.environment.MergedEnvironment;
+import net.talpidae.centipede.util.interpolation.CommandLineInterpolator;
 import net.talpidae.centipede.util.process.ProcessUtil;
 import net.talpidae.centipede.util.service.ServiceUtil;
 
@@ -35,6 +38,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -50,18 +55,31 @@ import static net.talpidae.centipede.util.service.ServiceUtil.setOutOfService;
 @Singleton
 public class TransitionUp implements Transition
 {
+    private final static String INSECT_NAME_KEY = "INSECT_NAME";
+
     private final Queen queen;
 
     private final EventBus eventBus;
 
     private final CentipedeRepository centipedeRepository;
 
+    private final CommandLineInterpolator commandLineInterpolator;
+
+    private final MergedEnvironment mergedEnvironment;
+
+
     @Inject
-    public TransitionUp(Queen queen, EventBus eventBus, CentipedeRepository centipedeRepository)
+    public TransitionUp(Queen queen,
+                        EventBus eventBus,
+                        CentipedeRepository centipedeRepository,
+                        CommandLineInterpolator commandLineInterpolator,
+                        MergedEnvironment mergedEnvironment)
     {
         this.queen = queen;
         this.eventBus = eventBus;
         this.centipedeRepository = centipedeRepository;
+        this.commandLineInterpolator = commandLineInterpolator;
+        this.mergedEnvironment = mergedEnvironment;
     }
 
 
@@ -72,7 +90,8 @@ public class TransitionUp implements Transition
         {
             try
             {
-                val image = service.getImage();
+                val serviceEnvironment = getServiceEnvironment(service);
+                val image = commandLineInterpolator.interpolate(service.getImage(), serviceEnvironment);
                 if (isNullOrEmpty(image))
                     throw new IllegalArgumentException("image path not specified");
 
@@ -85,10 +104,10 @@ public class TransitionUp implements Transition
                         throw new IllegalArgumentException("invalid path or unreadable JAR file: " + image);
 
                     arguments.add("java");
-                    arguments.addAll(CommandLine.split(service.getVmArguments()));
+                    arguments.addAll(interpolateAndSplit(service.getVmArguments(), serviceEnvironment));
                     arguments.add("-jar");
                     arguments.add(canonicalImagePath.toString());
-                    arguments.addAll(CommandLine.split(service.getArguments()));
+                    arguments.addAll(interpolateAndSplit(service.getArguments(), serviceEnvironment));
 
                     // TODO Use fork library on linux
                 }
@@ -98,7 +117,7 @@ public class TransitionUp implements Transition
                         throw new IllegalArgumentException("invalid path or not an executable file: " + image);
 
                     arguments.add(canonicalImagePath.toString());
-                    arguments.addAll(CommandLine.split(service.getArguments()));
+                    arguments.addAll(interpolateAndSplit(service.getArguments(), serviceEnvironment));
                 }
 
                 val workingDir = Files.createDirectories(Paths.get(service.getName()));
@@ -139,6 +158,20 @@ public class TransitionUp implements Transition
             // set out-of-service state, repeat until the service is started to ensure proper operation
             setOutOfService(queen, service, State.OUT_OF_SERVICE == service.getTargetState());
         }
+    }
+
+
+    private Map<String, String> getServiceEnvironment(Service service)
+    {
+        return mergedEnvironment.getEnvironment(ImmutableMap.of(
+                INSECT_NAME_KEY, service.getName()
+        ));
+    }
+
+
+    private List<String> interpolateAndSplit(String commandLine, Map<String, String> environment)
+    {
+        return CommandLine.split(commandLineInterpolator.interpolate(commandLine, environment));
     }
 
 

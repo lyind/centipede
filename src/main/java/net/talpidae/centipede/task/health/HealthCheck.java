@@ -26,6 +26,7 @@ import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.ServicesModified;
+import net.talpidae.centipede.util.service.ServiceUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -76,7 +77,7 @@ public class HealthCheck implements Runnable
     {
         val state = service.getState();
 
-        return !State.CHANGING.equals(state) && !State.DOWN.equals(state);
+        return state != State.DOWN && state != State.CHANGING && !(state == State.UNKNOWN && ServiceUtil.hasValidPid(service));
     }
 
 
