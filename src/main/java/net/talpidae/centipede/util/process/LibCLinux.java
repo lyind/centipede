@@ -187,4 +187,12 @@ public interface LibCLinux extends LibC
      * @return 0 if successul, error code if an error occured.
      */
     int kill(int pid, int sig);
+
+    /**
+     * Close a file descriptor.
+     *
+     * @param fd The file descriptor to close.
+     * @return 0 on success, -1 on error (errno set).
+     */
+    int close(int fd);
 }

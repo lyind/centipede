@@ -18,8 +18,10 @@
 package net.talpidae.centipede;
 
 import com.google.inject.Singleton;
+
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+
 import net.talpidae.base.insect.Queen;
 import net.talpidae.base.insect.config.QueenSettings;
 import net.talpidae.base.server.Server;
@@ -29,6 +31,7 @@ import net.talpidae.centipede.util.server.CentipedeRootHandlerWrapper;
 
 import javax.inject.Inject;
 import javax.servlet.ServletException;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -91,4 +94,7 @@ public class CentipedeApplication implements Application
             exit(1);
         }
     }
+
+
+
 }

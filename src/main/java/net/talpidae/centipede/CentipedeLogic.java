@@ -23,17 +23,21 @@ import com.google.inject.Singleton;
 
 import net.talpidae.base.event.ServerShutdown;
 import net.talpidae.base.event.ServerStarted;
+import net.talpidae.base.event.Shutdown;
 import net.talpidae.base.insect.Queen;
 import net.talpidae.base.util.thread.GeneralScheduler;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
+import net.talpidae.centipede.event.Frozen;
 import net.talpidae.centipede.event.NewMapping;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.service.EventForwarder;
+import net.talpidae.centipede.service.transition.TransitionDown;
 import net.talpidae.centipede.task.health.HealthCheck;
 import net.talpidae.centipede.task.init.InitTask;
 import net.talpidae.centipede.task.state.StateMachine;
+import net.talpidae.centipede.util.service.ServiceUtil;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -61,6 +65,8 @@ public class CentipedeLogic
 
     private final StateMachine stateMachine;
 
+    private final TransitionDown down;
+
     private final Queen queen;
 
 
@@ -72,7 +78,8 @@ public class CentipedeLogic
                           StateMachine stateMachine,
                           EventForwarder eventForwarder,
                           Queen queen,
-                          InitTask initTask)
+                          InitTask initTask,
+                          TransitionDown down)
     {
         this.repository = repository;
         this.eventBus = eventBus;
@@ -81,6 +88,8 @@ public class CentipedeLogic
         this.pulseCheck = pulseCheck;
         this.stateMachine = stateMachine;
         this.queen = queen;
+
+        this.down = down;
 
         eventBus.register(this);
 
@@ -94,6 +103,8 @@ public class CentipedeLogic
     {
         queen.run();
 
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdownHandler));
+
         // set all services to state "UNKNOWN" initially
         overrideStateUnknown();
 
@@ -102,6 +113,51 @@ public class CentipedeLogic
 
         // don't try starting services while we are still waiting for externally launched services state
         scheduler.scheduleWithFixedDelay(stateMachine, 7000L, 1000L, TimeUnit.MILLISECONDS);
+    }
+
+
+    /**
+     * Handle VM shutdown (cleanup).
+     */
+    private void shutdownHandler()
+    {
+        final long maximumShutdownDelay = TimeUnit.SECONDS.toMillis(8);
+        final long step = maximumShutdownDelay / StateMachine.TIMEOUT_TRANSITIONS;
+
+        // perform fast shutdown of all locally running services
+        try
+        {
+            // cycle through states faster than usual
+            // to match VM shutdown timeout restrictions < 10s
+            for (int i = 0; i < StateMachine.TIMEOUT_TRANSITIONS; ++i)
+            {
+                if (i == TransitionDown.TRANSITION_COUNT_NOTIFY_PHASE)
+                {
+                    // we need to do this to prevent scheduler task from launching services again
+                    eventBus.post(new Frozen(true));
+                }
+                else if (i == TransitionDown.TRANSITION_COUNT_KILLING_PHASE)
+                {
+                    // first, issue shutdown request to the UndertowServer, MessageExchange, GeneralScheduler, ...
+                    eventBus.post(new Shutdown());
+                }
+
+                val transitionCount = i;
+                repository.findAll()
+                        .stream()
+                        .filter(ServiceUtil::hasValidPid)
+                        .forEach(localService ->
+                        {
+                            down.apply(localService, transitionCount);
+                        });
+
+                Thread.sleep(step);
+            }
+        }
+        catch (InterruptedException e)
+        {
+            log.warn("shutdown of local services interrupted");
+        }
     }
 
 

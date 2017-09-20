@@ -42,6 +42,12 @@ import static net.talpidae.centipede.util.service.ServiceUtil.setOutOfService;
 @Singleton
 public class TransitionDown implements Transition
 {
+    public static final int TRANSITION_COUNT_NOTIFY_PHASE = 3;
+
+    public static final int TRANSITION_COUNT_TERMINATING_PHASE = 15;
+
+    public static final int TRANSITION_COUNT_KILLING_PHASE = 29;
+
     private final EventBus eventBus;
 
     private final CentipedeRepository centipedeRepository;
@@ -62,12 +68,12 @@ public class TransitionDown implements Transition
         val name = service.getName();
         val pid = service.getPid();
 
-        if (transitionCount < 10)
+        if (transitionCount < TRANSITION_COUNT_KILLING_PHASE)
         {
             // force insect out-of-service (to stop clients from connecting)
             setOutOfService(queen, service, true);
 
-            if (transitionCount == 3)
+            if (transitionCount == TRANSITION_COUNT_NOTIFY_PHASE)
             {
                 // first try to shutdown process via insect message
                 val socketAddress = fromService(service);
@@ -82,7 +88,7 @@ public class TransitionDown implements Transition
                     log.debug("can't send shutdown request to {}: host={}, port={}", name, service.getHost(), service.getPort());
                 }
             }
-            else if (transitionCount == 7)
+            else if (transitionCount == TRANSITION_COUNT_TERMINATING_PHASE)
             {
                 if (isValidPid(pid))
                 {

@@ -35,7 +35,7 @@ task printClasspath {
 shadowJar {
     zip64 true
     entryCompression = ZipEntryCompression.STORED
-    exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
 }
 
 dependencies {

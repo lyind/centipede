@@ -18,10 +18,12 @@
 package net.talpidae.centipede.task.state;
 
 import com.google.common.eventbus.EventBus;
+import com.google.common.eventbus.Subscribe;
 
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
+import net.talpidae.centipede.event.Frozen;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.service.transition.Transition;
 import net.talpidae.centipede.service.transition.TransitionDown;
@@ -34,6 +36,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -53,7 +56,7 @@ public class StateMachine implements Runnable
      */
     public static final int TIMEOUT_TRANSITIONS = 30;
 
-    public static final long AFTER_TIMEOUT_COOLDOWN_DELAY_MS = TimeUnit.SECONDS.toMillis(45);
+    public static final long AFTER_TIMEOUT_COOLDOWN_DELAY_MS = TimeUnit.SECONDS.toMillis(25);
 
     private final CentipedeRepository centipedeRepository;
 
@@ -65,6 +68,8 @@ public class StateMachine implements Runnable
 
     private final Map<String, State> transactionTargetState = new HashMap<>();
 
+    private final AtomicBoolean isFrozen = new AtomicBoolean(false);
+
 
     @Inject
     public StateMachine(CentipedeRepository centipedeRepository, EventBus eventBus, TransitionUp up, TransitionDown down)
@@ -73,11 +78,16 @@ public class StateMachine implements Runnable
         this.eventBus = eventBus;
         this.up = up;
         this.down = down;
+
+        eventBus.register(this);
     }
 
     @Override
     public void run()
     {
+        if (isFrozen.get())
+            return;
+
         for (val service : centipedeRepository.findAll())
         {
             val name = service.getName();
@@ -220,5 +230,12 @@ public class StateMachine implements Runnable
                 .build());
 
         eventBus.post(new ServicesModified(Collections.singletonList(name)));
+    }
+
+
+    @Subscribe
+    public void onStateFreeze(Frozen frozen)
+    {
+        this.isFrozen.compareAndSet(!frozen.isFrozen(), frozen.isFrozen());
     }
 }
