@@ -19,21 +19,18 @@ package net.talpidae.centipede;
 
 import com.google.inject.Singleton;
 
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-
-import net.talpidae.base.insect.Queen;
-import net.talpidae.base.insect.config.QueenSettings;
 import net.talpidae.base.server.Server;
 import net.talpidae.base.server.ServerConfig;
 import net.talpidae.base.util.Application;
 import net.talpidae.centipede.util.server.CentipedeRootHandlerWrapper;
 
+import java.net.InetSocketAddress;
+
 import javax.inject.Inject;
 import javax.servlet.ServletException;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 
 import static java.lang.System.exit;
 
@@ -46,24 +43,16 @@ public class CentipedeApplication implements Application
 
     private final Server server;
 
-    private final QueenSettings queenSettings;
-
-    private final CentipedeLogic centipedeLogic;
-
     private final CentipedeRootHandlerWrapper rootHandlerWrapper;
 
 
     @Inject
     public CentipedeApplication(ServerConfig serverConfig,
                                 Server server,
-                                QueenSettings queenSettings,
-                                CentipedeLogic centipedeLogic,
                                 CentipedeRootHandlerWrapper rootHandlerWrapper)
     {
         this.serverConfig = serverConfig;
         this.server = server;
-        this.queenSettings = queenSettings;
-        this.centipedeLogic = centipedeLogic;
         this.rootHandlerWrapper = rootHandlerWrapper;
     }
 
@@ -80,11 +69,8 @@ public class CentipedeApplication implements Application
         try
         {
             server.start();
-
             val bindAddress = new InetSocketAddress(serverConfig.getHost(), serverConfig.getPort());
             log.info("server started on {}", bindAddress.toString());
-
-            queenSettings.setBindAddress(bindAddress);
 
             server.waitForShutdown();
         }
@@ -94,7 +80,4 @@ public class CentipedeApplication implements Application
             exit(1);
         }
     }
-
-
-
 }

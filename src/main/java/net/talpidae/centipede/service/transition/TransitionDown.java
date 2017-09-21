@@ -48,6 +48,8 @@ public class TransitionDown implements Transition
 
     public static final int TRANSITION_COUNT_KILLING_PHASE = 29;
 
+    public static final int SHUTDOWN_REQUEST_COUNT = 3;
+
     private final EventBus eventBus;
 
     private final CentipedeRepository centipedeRepository;
@@ -73,19 +75,26 @@ public class TransitionDown implements Transition
             // force insect out-of-service (to stop clients from connecting)
             setOutOfService(queen, service, true);
 
-            if (transitionCount == TRANSITION_COUNT_NOTIFY_PHASE)
+            if (transitionCount >= TRANSITION_COUNT_NOTIFY_PHASE
+                    && transitionCount <= TRANSITION_COUNT_NOTIFY_PHASE + SHUTDOWN_REQUEST_COUNT)
             {
                 // first try to shutdown process via insect message
                 val socketAddress = fromService(service);
                 if (socketAddress != null)
                 {
-                    log.debug("sending shutdown request to {}", name);
+                    if (transitionCount == TRANSITION_COUNT_NOTIFY_PHASE)
+                    {
+                        log.debug("sending shutdown request to {}", name);
+                    }
                     queen.sendShutdown(socketAddress);
                 }
                 else
                 {
                     // skip sending shutdown request if no port is known
-                    log.debug("can't send shutdown request to {}: host={}, port={}", name, service.getHost(), service.getPort());
+                    if (transitionCount == TRANSITION_COUNT_NOTIFY_PHASE)
+                    {
+                        log.debug("can't send shutdown request to {}: host={}, port={}", name, service.getHost(), service.getPort());
+                    }
                 }
             }
             else if (transitionCount == TRANSITION_COUNT_TERMINATING_PHASE)

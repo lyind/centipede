@@ -23,7 +23,10 @@ import net.talpidae.base.insect.SyncQueen;
 import net.talpidae.base.insect.config.QueenSettings;
 import net.talpidae.base.insect.message.payload.Mapping;
 import net.talpidae.base.insect.state.InsectState;
+import net.talpidae.base.server.ServerConfig;
 import net.talpidae.centipede.event.NewMapping;
+
+import java.net.InetSocketAddress;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -34,12 +37,25 @@ public class CentipedeSyncQueen extends SyncQueen
 {
     private final EventBus eventBus;
 
+    private final ServerConfig serverConfig;
+
+
     @Inject
-    public CentipedeSyncQueen(QueenSettings settings, EventBus eventBus)
+    public CentipedeSyncQueen(QueenSettings settings, ServerConfig serverConfig, EventBus eventBus)
     {
         super(settings);
 
         this.eventBus = eventBus;
+        this.serverConfig = serverConfig;
+    }
+
+
+    @Override
+    public void run()
+    {
+        getSettings().setBindAddress(new InetSocketAddress(serverConfig.getHost(), serverConfig.getPort()));
+
+        super.run();
     }
 
 

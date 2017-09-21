@@ -1,6 +1,8 @@
 .gradle
 build/
 
+*.ipr
+
 # Ignore Gradle GUI config
 gradle-app.setting
 
@@ -22,6 +24,7 @@ build/**
 .idea/**/dbnavigator.xml
 .idea/**/workspace.xml
 .idea/**/tasks.xml
+.idea/**/modules.xml
 .idea/dictionaries
 
 # Sensitive or high-churn files:

@@ -30,15 +30,18 @@ import net.talpidae.base.insect.SyncQueen;
 import net.talpidae.base.server.WebSocketEndpoint;
 import net.talpidae.base.util.Application;
 import net.talpidae.base.util.auth.Authenticator;
+import net.talpidae.base.util.lifecycle.ShutdownHook;
 import net.talpidae.base.util.session.SessionHolder;
 import net.talpidae.base.util.session.SessionService;
 import net.talpidae.centipede.bean.configuration.Configuration;
 import net.talpidae.centipede.database.CentipedeDefaultDataBaseConfig;
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.resource.CentipedeWebSocketEndPoint;
+import net.talpidae.centipede.service.EventForwarder;
 import net.talpidae.centipede.service.ServiceModule;
 import net.talpidae.centipede.util.auth.LocalAuthenticator;
 import net.talpidae.centipede.util.configuration.ConfigurationLoader;
+import net.talpidae.centipede.util.lifecycle.CentipedeShutdownHook;
 import net.talpidae.centipede.util.session.LocalSessionService;
 import net.talpidae.centipede.util.session.WebSocketSessionHolder;
 
@@ -73,6 +76,11 @@ public class CentipedeApplicationModule extends AbstractModule
         OptionalBinder.newOptionalBinder(binder(), new TypeLiteral<Class<? extends WebSocketEndpoint>>() {}).setBinding().toInstance(CentipedeWebSocketEndPoint.class);
 
         install(new ServiceModule());
+
+        OptionalBinder.newOptionalBinder(binder(), ShutdownHook.class).setBinding().to(CentipedeShutdownHook.class);
+
+        bind(EventForwarder.class).asEagerSingleton();
+        bind(CentipedeLogic.class).asEagerSingleton();
     }
 
 
