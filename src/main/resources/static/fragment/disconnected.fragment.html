@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="core/app.css">
+<script src="/core/app.js"></script>
+<div data-id="overlay" class="disconnected-overlay" style="display:none">
+    <div style="height:20%"></div>
+    <h2 style="color:darkorange; font-weight: bold">Lost Connection</h2>
+    <br/>
+    <div class="loading"></div>
+    <br/>
+    <div style="font-size:110%">reconnecting...</div>
+</div>
+<div data-id="mask" class="disconnected-mask" style="display:none"></div>
+<script>
+    "use strict";
+    app(function (that, app)
+    {
+        Rx.Observable.empty()
+            .merge(
+                // connect - false (hide)
+                app.broker(app.subject.WEBSOCKET_OPEN).map(function ()
+                {
+                    return false;
+                }),
+                // close clicks -> false (hide)
+                app.eachClick(that.mask).map(function ()
+                {
+                    return false;
+                }),
+                // disconnects -> true (show)
+                app.broker(app.subject.WEBSOCKET_ERROR).map(function ()
+                {
+                    return true;
+                })
+            )
+            .distinctUntilChanged()
+            .subscribe(function (show)
+            {
+                console.log("[disconnected-fragment] show: ", show);
+                var element = [that.mask, that.overlay];
+                for (var i = 0; i < element.length; ++i)
+                {
+                    element[i].style.opacity = show ? 1 : 0;
+                    //app.setVisibility(element[i], show);
+                    element[i].style.display = show ? "block" : "none";
+                }
+            });
+    });
+</script>

@@ -2,65 +2,88 @@
 <meta charset="UTF-8"/>
 <link rel="stylesheet" href="core/app.css">
 <script src="/core/app.js"></script>
-<div class="popover" style="position: absolute; z-index: 20; left: unset; top: 0.2rem; right: 0.2rem">
-    <div class="btn circle" style="overflow:hidden; height: 4rem; width: 4rem"><img class="no-touch" data-id="profileGlyph" src="../pic/user.svg"></div>
-    <div class="popover-container" style="position: absolute; left: unset; height: 14rem; top: 15rem; right: -6rem; margin: unset">
+<div class="popover"
+     style="position: absolute; z-index: 20; left: unset; top: 0.2rem; right: 0.2rem">
+    <div class="btn circle" style="overflow:hidden; height: 4rem; width: 4rem"><img class="no-touch"
+                                                                                    data-id="profileGlyph"
+                                                                                    src="../pic/user.svg">
+    </div>
+    <div class="popover-container"
+         style="position: absolute; left: unset; height: 14rem; top: 15rem; right: -6rem; margin: unset">
         <div data-id="profileFrame" class="card text-left" style="height: 100%">
             <div class="card-header"><h3 data-id="profileName"></h3></div>
             <div class="card-body" style="height: 100%">
                 <form data-id="profileForm" style="height: 100%">
                     <label class="form-label" for="profileFormName">Username</label>
                     <div class="input-group">
-                        <div class="input-group-addon addon-lg" style="width: 2.4rem; padding:0; background-image: none, url('../pic/user.svg'); background-size: contain; background-repeat: no-repeat;"></div>
-                        <input id="profileFormName" data-id="profileFormName" tabIndex="1" type="text" class="form-input input-lg" placeholder="Username" name="name" required>
+                        <div class="input-group-addon addon-lg"
+                             style="width: 2.4rem; padding:0; background-image: none, url('../pic/user.svg'); background-size: contain; background-repeat: no-repeat;"></div>
+                        <input id="profileFormName" data-id="profileFormName" tabIndex="1"
+                               type="text" class="form-input input-lg" placeholder="Username"
+                               name="name" required>
                     </div>
                     <label class="form-label" for="profileFormPassword">Password</label>
                     <div class="input-group">
-                        <div class="input-group-addon addon-lg" style="width: 2.4rem; padding:0; background-image: none, url('../pic/key.svg'); background-size: contain; background-repeat: no-repeat;"></div>
-                        <input id="profileFormPassword" data-id="profileFormPassword" tabIndex="2" type="password" class="form-input input-lg" placeholder="Password" name="password" required>
+                        <div class="input-group-addon addon-lg"
+                             style="width: 2.4rem; padding:0; background-image: none, url('../pic/key.svg'); background-size: contain; background-repeat: no-repeat;"></div>
+                        <input id="profileFormPassword" data-id="profileFormPassword" tabIndex="2"
+                               type="password" class="form-input input-lg" placeholder="Password"
+                               name="password" required>
                     </div>
-                    <br />
-                    <button data-id="profileSignin" type="submit" class="btn btn-primary absolute" style="left: 1rem; bottom: 1rem">Signin</button>
+                    <br/>
+                    <button data-id="profileSignin" type="submit" class="btn btn-primary absolute"
+                            style="left: 1rem; bottom: 1rem">Signin
+                    </button>
                     <script>
-                    app(function(that, app)
-                    {
-                        // handle credential input
-                        app.eachSubmit(that.parent)
-                            .takeUntil(app.navigate())
-                            .map(function (e)
-                            {
-                                var name = that.profileFormName.value;
-                                var password = that.profileFormPassword.value;
+                        "use strict";
+                        app(function (that, app)
+                        {
+                            // handle credential input
+                            app.eachSubmit(that.parent)
+                                .takeUntil(app.navigate())
+                                .map(function (e)
+                                {
+                                    var name = that.profileFormName.value;
+                                    var password = that.profileFormPassword.value;
 
-                                return {credentials: {name: name, password: password}, token: ""};
-                            })
-                            .subscribe(app.ws);
+                                    return {
+                                        credentials: {name: name, password: password},
+                                        token: ""
+                                    };
+                                })
+                                .subscribe(app.ws);
 
-                        // hide sign-in form if we already have a token
-                        app.broker(app.subject.TOKEN)
-                            .takeUntil(app.navigate())
-                            .distinctUntilChanged()
-                            .subscribe(function(token)
-                            {
-                                app.setVisibility(that.parent, !token);
-                            });
-                    });
-                    //# sourceURL=profile.fragment.html#1
+                            // hide sign-in form if we already have a token
+                            app.broker(app.subject.TOKEN)
+                                .takeUntil(app.navigate())
+                                .distinctUntilChanged()
+                                .subscribe(function (token)
+                                {
+                                    app.setVisibility(that.parent, !token);
+                                });
+                        });
+                        //# sourceURL=profile.fragment.html#1
                     </script>
                 </form>
                 <div data-id="profileInfo" style="height: 100%">
-                    <button data-id="profileSignout" class="btn btn-primary absolute" style="left: 1rem; bottom: 1rem">Logout</button>
+                    <button data-id="profileSignout" class="btn btn-primary absolute"
+                            style="left: 1rem; bottom: 1rem">Logout
+                    </button>
                     <script>
-                        app(function(that, app)
+                        "use strict";
+                        app(function (that, app)
                         {
                             // handle sign-out click
                             app.eachClickUntilNavigate(that.profileSignout)
-                                .flatMap(function(e) { return app.broker(app.subject.TOKEN).take(1); })
-                                .map(function(token)
+                                .flatMap(function (e)
                                 {
-                                    return { credentials: {}, token: null };
+                                    return app.broker(app.subject.TOKEN).take(1);
                                 })
-                                .subscribe(function(signoutMessage)
+                                .map(function (token)
+                                {
+                                    return {credentials: {}, token: null};
+                                })
+                                .subscribe(function (signoutMessage)
                                 {
                                     app.ws(signoutMessage);
                                 });
@@ -69,7 +92,7 @@
                             app.broker(app.subject.TOKEN)
                                 .takeUntil(app.navigate())
                                 .distinctUntilChanged()
-                                .subscribe(function(token)
+                                .subscribe(function (token)
                                 {
                                     app.setVisibility(that.parent, !!token);
                                 });
@@ -81,115 +104,140 @@
         </div>
     </div>
     <script>
-    app(function(that, app)
-    {
-        // update profile fragment UI state
-        app.broker(app.subject.TOKEN)
-            .takeUntil(app.navigate())
-            .distinctUntilChanged()
-            .subscribe(function(token)
-            {
-                // persist token
-                if (token)
-                    app.set(app.subject.TOKEN, token);
-                else
-                    app.remove(app.subject.TOKEN);
-
-                // update profile glyph
-                that.profileGlyph.src = (token) ? "../pic/admin-user.svg" : "../pic/user.svg";
-            });
-
-
-        // handle login name changes
-        app.broker(app.subject.CREDENTIALS)
-            .takeUntil(app.navigate())
-            .subscribe(function(credentials)
-            {
-                that.profileName.textContent = (credentials && credentials.name) ? credentials.name : "";
-            });
-    });
-
-    app.once(function(that, app)
-    {
-        const ATTEMPTED_ROUTE = "ATTEMPTED_ROUTE";
-
-        // if someone navigates to the sign-in page manually (or refreshes there) redirect to "/" after sign-in
-        app.set(ATTEMPTED_ROUTE, "/");
-
-        var isRouteSignin = function(route)
+        "use strict";
+        app(function (that, app)
         {
-            return route.strippedPath === "/signin.html" || route.strippedPath === "signin.html";
-        };
-
-        // reset token on UNAUTHORIZED error
-        app.brokerEvent(app.subject.ERROR)
-            .filter(function(error) { return "UNAUTHORIZED" === error; })
-            .flatMap(function(error)
-            {
-                return app.broker(app.subject.ROUTE)
-                    .take(1)
-                    .map(function(route) { return { route: route, error: error }; });
-            })
-            .subscribe(function(routeAndError)
-            {
-                console.log("[profile-fragment] UNAUTHORIZED");
-
-                if (!isRouteSignin(routeAndError.route))
+            // update profile fragment UI state
+            app.broker(app.subject.TOKEN)
+                .takeUntil(app.navigate())
+                .distinctUntilChanged()
+                .subscribe(function (token)
                 {
-                    app.set(ATTEMPTED_ROUTE, routeAndError.route.canonicalPathWithArgs);
-                    app.navigate("signin.html");
-                }
-            });
+                    // persist token
+                    if (token)
+                        app.set(app.subject.TOKEN, token);
+                    else
+                        app.remove(app.subject.TOKEN);
 
-        // on route change attempts, if token is empty, redirect to sign-in page
-        app.brokerEvent(app.subject.NEXT_ROUTE)
-            .filter(function(route) { return !isRouteSignin(route); })
-            .flatMap(function(route) { return app.broker(app.subject.TOKEN).take(1).map(function(token) { return { route: route, token: token }}); })
-            .filter(function(routeAndToken) { return !routeAndToken.token; })
-            .do(function(routeAndToken) {
-                // persist this routing attempt (for continuing after successful sign-in
-                app.set(ATTEMPTED_ROUTE, routeAndToken.route.canonicalPathWithArgs);
-            })
-            .subscribe(function(routeAndToken)
-            {
-                console.log("[profile-fragment] cancel routing to " + routeAndToken.route.strippedPath + ", redirecting to sign-in page");
-                routeAndToken.route.subscription.unsubscribe();
-                app.navigate("signin.html");
-            });
+                    // update profile glyph
+                    that.profileGlyph.src = (token) ? "../pic/admin-user.svg" : "../pic/user.svg";
+                });
 
-        // if we were on the signin page and received a token, navigate back to index (improve this)
-        app.broker(app.subject.TOKEN)
-            .distinctUntilChanged()
-            .filter(function(token) { return !!token; })
-            .flatMap(function(token)
-            {
-                return app.broker(app.subject.ROUTE).take(1);
-            })
-            .subscribe(function(route)
-            {
-                console.log("[profile-fragment] signed in");
-                var attemptedRoute = app.get(ATTEMPTED_ROUTE);
-                if (attemptedRoute)
+            // handle login name changes
+            app.broker(app.subject.CREDENTIALS)
+                .takeUntil(app.navigate())
+                .subscribe(function (credentials)
                 {
-                    app.remove(ATTEMPTED_ROUTE);
-                    if (attemptedRoute !== route.strippedPath)
+                    that.profileName.textContent = (credentials && credentials.name) ? credentials.name : "";
+                });
+        });
+
+        app.once(function (that, app)
+        {
+            const ATTEMPTED_ROUTE = "ATTEMPTED_ROUTE";
+
+            // if someone navigates to the sign-in page manually (or refreshes there) redirect to "/" after sign-in
+            app.set(ATTEMPTED_ROUTE, "/");
+
+            var isRouteSignin = function (route)
+            {
+                return route.strippedPath === "/signin.html" || route.strippedPath === "signin.html";
+            };
+
+            // reset token on UNAUTHORIZED error
+            app.brokerEvent(app.subject.ERROR)
+                .filter(function (error)
+                {
+                    return "UNAUTHORIZED" === error;
+                })
+                .flatMap(function (error)
+                {
+                    return app.broker(app.subject.ROUTE)
+                        .take(1)
+                        .map(function (route)
+                        {
+                            return {route: route, error: error};
+                        });
+                })
+                .subscribe(function (routeAndError)
+                {
+                    console.log("[profile-fragment] UNAUTHORIZED");
+
+                    if (!isRouteSignin(routeAndError.route))
                     {
-                        console.log("[profile-fragment] trying to reach attempted route: " + attemptedRoute);
-                        app.navigate(attemptedRoute);
+                        app.set(ATTEMPTED_ROUTE, routeAndError.route.canonicalPathWithArgs);
+                        app.navigate("signin.html");
                     }
-                }
-            });
+                });
 
-        // initialize TOKEN from localStorage and immediately try to renew it
-        // If we got a token, we try to refresh it right away.
-        // This is how we acquire the user name associated with the token.
-        // In case token is undefined/null we will just get an UNAUTHORIZED error.
-        app.broker(app.subject.WEBSOCKET_OPEN)
-            .distinctUntilChanged()
-            .map(function() { return { "credentials": {}, "token": app.get(app.subject.TOKEN) }; })
-            .subscribe(app.ws);
-    });
+            // on route change attempts, if token is empty, redirect to sign-in page
+            app.brokerEvent(app.subject.NEXT_ROUTE)
+                .filter(function (route)
+                {
+                    return !isRouteSignin(route);
+                })
+                .flatMap(function (route)
+                {
+                    return app.broker(app.subject.TOKEN).take(1).map(function (token)
+                    {
+                        return {route: route, token: token};
+                    });
+                })
+                .filter(function (routeAndToken)
+                {
+                    return !routeAndToken.token;
+                })
+                .do(function (routeAndToken)
+                {
+                    // persist this routing attempt (for continuing after successful sign-in
+                    app.set(ATTEMPTED_ROUTE, routeAndToken.route.canonicalPathWithArgs);
+                })
+                .subscribe(function (routeAndToken)
+                {
+                    console.log("[profile-fragment] cancel routing to " + routeAndToken.route.strippedPath + ", redirecting to sign-in page");
+                    routeAndToken.route.subscription.unsubscribe();
+                    app.navigate("signin.html");
+                });
 
-    //# sourceURL=profile.fragment.html#3
+            // if we were on the signin page and received a token, navigate back to index (improve this)
+            app.broker(app.subject.TOKEN)
+                .distinctUntilChanged()
+                .filter(function (token)
+                {
+                    return !!token;
+                })
+                .flatMap(function (token)
+                {
+                    return app.broker(app.subject.ROUTE).take(1);
+                })
+                .subscribe(function (route)
+                {
+                    console.log("[profile-fragment] signed in");
+                    var attemptedRoute = app.get(ATTEMPTED_ROUTE);
+                    if (attemptedRoute)
+                    {
+                        app.remove(ATTEMPTED_ROUTE);
+                        if (attemptedRoute !== route.strippedPath)
+                        {
+                            console.log("[profile-fragment] trying to reach attempted route: " + attemptedRoute);
+                            app.navigate(attemptedRoute);
+                        }
+                    }
+                });
+
+            // initialize TOKEN from localStorage and immediately try to renew it
+            // If we got a token, we try to refresh it right away.
+            // This is how we acquire the user name associated with the token.
+            // In case token is undefined/null we will just get an UNAUTHORIZED error.
+            app.broker(app.subject.WEBSOCKET_OPEN)
+                .distinctUntilChanged()
+                .map(function ()
+                {
+                    return {"credentials": {}, "token": app.get(app.subject.TOKEN)};
+                })
+                .subscribe(app.ws);
+        });
+
+        //# sourceURL=profile.fragment.html#3
     </script>
 </div>

@@ -17,6 +17,7 @@
         animation: fadein 2s;
     }
 </style>
+<div data-keep="fragment/disconnected.fragment.html"></div>
 <div data-id="profileFragment" data-keep="fragment/profile.fragment.html"></div>
 <div class="empty">
     <h4 class="empty-title">You are not signed in</h4>
@@ -26,6 +27,7 @@
     </div>
 </div>
 <script>
+    "use strict";
     app(function (that, app)
     {
         app.show(that.loginArrowHint);

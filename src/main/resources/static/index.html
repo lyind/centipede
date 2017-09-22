@@ -15,8 +15,9 @@
     }
 </style>
 <h1>Please enable JavaScript to use this application.
-    <script>document.currentScript.parentNode.setAttribute("hidden", "");</script>
+    <script>"use strict";document.currentScript.parentNode.setAttribute("hidden", "");</script>
 </h1>
+<div data-keep="fragment/disconnected.fragment.html"></div>
 <div data-keep="fragment/profile.fragment.html"></div>
 <div>
     <h2>
@@ -62,6 +63,7 @@
         </div>
 
         <script>
+            "use strict";
             app(function (that, app)
             {
                 app.require("core/array-adapter.js",
