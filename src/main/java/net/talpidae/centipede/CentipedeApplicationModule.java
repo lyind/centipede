@@ -26,6 +26,8 @@ import com.google.inject.multibindings.OptionalBinder;
 
 import net.talpidae.base.Base;
 import net.talpidae.base.database.DefaultDataBaseConfig;
+import net.talpidae.base.insect.AsyncQueen;
+import net.talpidae.base.insect.Queen;
 import net.talpidae.base.insect.SyncQueen;
 import net.talpidae.base.server.WebSocketEndpoint;
 import net.talpidae.base.util.Application;
@@ -62,9 +64,11 @@ public class CentipedeApplicationModule extends AbstractModule
     @Override
     protected void configure()
     {
-        bind(DefaultDataBaseConfig.class).to(CentipedeDefaultDataBaseConfig.class);
+        bind(SyncQueen.class).to(CentipedeSyncQueen.class).asEagerSingleton();
+        OptionalBinder.newOptionalBinder(binder(), Queen.class).setBinding().to(AsyncQueen.class).asEagerSingleton();
+
         bind(Application.class).to(CentipedeApplication.class);
-        bind(SyncQueen.class).to(CentipedeSyncQueen.class);
+        bind(DefaultDataBaseConfig.class).to(CentipedeDefaultDataBaseConfig.class);
 
         bind(Authenticator.class).to(LocalAuthenticator.class);
         bind(SessionService.class).to(LocalSessionService.class);
