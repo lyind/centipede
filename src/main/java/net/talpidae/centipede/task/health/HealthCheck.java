@@ -29,7 +29,6 @@ import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.util.service.ServiceUtil;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -46,6 +45,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
+import static com.google.common.base.Objects.firstNonNull;
 import static com.google.common.base.Strings.nullToEmpty;
 
 
@@ -166,7 +166,7 @@ public class HealthCheck implements Runnable
     private static boolean isSameInstance(Service service, InsectState state)
     {
         val socketAddress = state.getSocketAddress();
-        val knownHostAndPort = HostAndPort.fromParts(nullToEmpty(service.getHost()), service.getPort());
+        val knownHostAndPort = HostAndPort.fromParts(nullToEmpty(service.getHost()), firstNonNull(service.getPort(), 0));
         val instanceHostAndPort = HostAndPort.fromParts(nullToEmpty(socketAddress.getHostString()), socketAddress.getPort());
 
         return knownHostAndPort.equals(instanceHostAndPort);
