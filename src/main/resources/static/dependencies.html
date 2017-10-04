@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../core/app.css">
+<title>Centipede - Dependencies</title>
+<style>
+
+    .link {
+        fill: none;
+        stroke: #666;
+        stroke-width: 1.5px;
+    }
+
+    /* "UNKNOWN", "DOWN", "OUT_OF_SERVICE", "CHANGING", "UP" */
+    .link.UNKNOWN {
+        stroke: orange;
+    }
+
+    .link.DOWN {
+        stroke: red;
+    }
+
+    .link.OUT_OF_SERVICE {
+        stroke: magenta;
+    }
+
+    .link.CHANGING {
+        stroke: cyan;
+    }
+
+    .link.UP {
+        stroke: green;
+    }
+
+    .node.UNKNOWN {
+        fill: darkgray;
+    }
+
+    .node.DOWN {
+        fill: firebrick;
+    }
+
+    .node.OUT_OF_SERVICE {
+        fill: royalblue;
+    }
+
+    .node.CHANGING {
+        fill: gold;
+    }
+
+    .node.UP {
+        fill: lawngreen;
+    }
+
+    circle {
+        stroke: #333;
+        stroke-width: 1.5px;
+    }
+
+    text {
+        font: 12px sans-serif;
+        pointer-events: none;
+        text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+    }
+</style>
+<script src="../core/app.js"></script>
+<div data-keep="fragment/disconnected.fragment.html"></div>
+<div data-keep="fragment/profile.fragment.html"></div>
+<div>
+    <h2>
+        <span class="hide-xs">Dependencies</span>
+        <span class="show-xs">&#x200B;</span>
+        <div class="absolute" style="left:unset; top: 0; right: 6rem">
+            <button data-id="dependenciesCancel" class="btn btn-primary">Back</button>
+        </div>
+    </h2>
+    <div class="divider"></div>
+    <svg data-id="dependencyChart" width="960" height="500" viewBox="0 0 960 500"
+         preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%"></svg>
+    <script>
+        "use strict";
+        console.log("[dependencies] init");
+
+        app(function (that, app)
+        {
+            app.require("lib/d3.v4.min.js",
+                function ()
+                {
+                    const width = 960;
+                    const height = 500;
+
+                    const transform = function (d)
+                    {
+                        return "translate(" + d.x + "," + d.y + ")";
+                    };
+
+                    const svg = d3.select(that.dependencyChart);
+                    svg.append("defs").selectAll("marker")
+                        .data(["UNKNOWN", "DOWN", "OUT_OF_SERVICE", "CHANGING", "UP"])
+                        .enter()
+                        .append("marker")
+                        .attr("id", function (d)
+                        {
+                            return d;
+                        })
+                        .attr("viewBox", "0 -5 10 10")
+                        .attr("refX", 15)
+                        .attr("refY", -1.5)
+                        .attr("markerWidth", 6)
+                        .attr("markerHeight", 6)
+                        .attr("orient", "auto")
+                        .append("path")
+                        .attr("d", "M0,-5L10,0L0,5");
+
+                    var path = svg.append("g").selectAll("path");
+                    var circle = svg.append("g").selectAll("circle");
+                    var text = svg.append("g").selectAll("text");
+
+                    const simulation = d3.forceSimulation([])
+                        .force("charge", d3.forceManyBody().distanceMin(0.3).strength(-600))
+                        .force("link", d3.forceLink([]).distance(60))
+                        .force("center", d3.forceCenter(width / 2, height / 2))
+                        .on("tick", function () {})
+                        .stop();
+
+                    // draw dependencies chart using d3
+                    app.broker(app.subject.DEPENDENCIES)
+                        .takeUntil(app.navigate())
+                        .subscribeOn(Rx.Scheduler.asap)  // micro-task queue
+                        .do(function ()
+                        {
+                            console.log("[dependencies] animation started");
+                        })
+                        .map(function (dependencies)
+                        {
+                            var nodes = {};
+                            dependencies.forEach(function (link)
+                            {
+                                link.source = nodes[link.source] || (nodes[link.source] = {
+                                    x: 0,
+                                    y: 0,
+                                    name: link.source,
+                                    state: link.sourceState
+                                });
+                                link.target = nodes[link.target] || (nodes[link.target] = {
+                                    x: 0,
+                                    y: 0,
+                                    name: link.target,
+                                    state: link.targetState
+                                });
+                            });
+
+                            return {
+                                path: path,
+                                text: text,
+                                circle: circle,
+                                simulation: simulation,
+                                nodes: d3.values(nodes),
+                                links: d3.values(dependencies)
+                            };
+                        })
+                        .map(function (state)
+                        {
+                            state.path = state.path.data(state.links, function (d)
+                            {
+                                return d.source.name + "-" + d.target.name;
+                            });
+
+                            state.path.exit().remove();
+                            state.path = state.path.enter()
+                                .append("path")
+                                .merge(state.path)
+                                .attr("class", function (d)
+                                {
+                                    return "link " + d.targetState;
+                                })
+                                .attr("marker-end", function (d)
+                                {
+                                    return "url(#" + d.targetState + ")";
+                                });
+
+                            return state;
+                        })
+                        .map(function (state)
+                        {
+                            state.circle = state.circle.data(state.nodes, function (d)
+                            {
+                                return d.name;
+                            });
+
+                            state.circle.exit().remove();
+                            state.circle = state.circle.enter()
+                                .append("circle")
+                                .attr("r", 8)
+                                .merge(state.circle)
+                                .attr("class", function (d)
+                                {
+                                    return "node " + d.state;
+                                });
+
+                            return state;
+                        })
+                        .map(function (state)
+                        {
+                            state.text = state.text.data(state.nodes, function (d)
+                            {
+                                return "t-" + d.name;
+                            });
+
+                            state.text.exit().remove();
+                            state.text = state.text.enter()
+                                .append("text")
+                                .attr("x", 10)
+                                .attr("y", ".60em")
+                                .text(function (d)
+                                {
+                                    return d.name;
+                                })
+                                .merge(state.text);
+
+                            return state;
+                        })
+                        .map(function (state)
+                        {
+                            state.simulation.nodes(state.nodes);
+                            state.simulation.force("link").links(state.links);
+                            state.simulation.alpha(1).restart().stop();
+
+                            return state;
+                        })
+                        .do(function (state)
+                        {
+                            // save selections
+                            path = state.path;
+                            circle = state.circle;
+                            text = state.text;
+                        })
+                        .expand(function (state)
+                        {
+                            // tick in micro-task queue (faster than builtin d3 setTimeout())
+                            // until alpha < 0.001 (as default)
+                            return (state.simulation.alpha() > 0.002)
+                                ? Rx.Observable.of(state).subscribeOn(Rx.Scheduler.asap)  // micro-task queue
+                                : Rx.Observable.empty()
+                                    .finally(function ()
+                                    {
+                                        state.circle.attr("transform", transform);
+                                        state.text.attr("transform", transform);
+                                        state.path.attr("d", function (d)
+                                        {
+                                            if (d.source.name !== d.target.name)
+                                            {
+                                                // depends on other service
+                                                var dx = d.target.x - d.source.x,
+                                                    dy = d.target.y - d.source.y,
+                                                    dr = Math.sqrt(dx * dx + dy * dy);
+                                                return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
+                                            }
+                                            else
+                                            {
+                                                // depends on self (shouldn't actually happen in real-life)
+                                                var p = "M" + d.source.x + "," + d.source.y
+                                                    + "m" + 0 + "," + 8
+                                                    + "a" + 40 + "," + 40 / 6 + " 0 1 1 " + 0 + "," + "-16";
+
+                                                return p;
+                                            }
+                                        });
+
+                                        console.log("[dependencies] animation done");
+                                    });
+                        })
+                        .subscribe(function (state)
+                        {
+                            state.simulation.tick();
+                        });
+
+                    // request dependencies initially and when services change
+                    app.broker(app.subject.SERVICES)
+                        .merge(Rx.Observable.of(true))
+                        .takeUntil(app.navigate())
+                        .subscribeOn(Rx.Scheduler.asap)
+                        .map(function ()
+                        {
+                            return {dependencies: []};
+                        }) // request deps
+                        .subscribe(app.ws);
+                });
+
+            // cancel/back
+            app.eachClickUntilNavigate(that.dependenciesCancel)
+                .subscribe(function ()
+                {
+                    app.navigate("..");
+                });
+        });
+    </script>
+</div>

@@ -44,7 +44,7 @@ function()
             }
             else
             {
-                // add information to messages, here
+                // optionally add information to messages, here
             }
 
             return message;

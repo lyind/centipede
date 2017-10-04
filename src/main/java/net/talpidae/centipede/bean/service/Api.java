@@ -17,13 +17,12 @@
 
 package net.talpidae.centipede.bean.service;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
 import net.talpidae.base.util.auth.Credentials;
 import net.talpidae.centipede.service.wrapper.CallContext;
 
-import java.util.List;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
 
 /**
@@ -56,6 +55,11 @@ public class Api
      * Main topic, manage services.
      */
     private Iterable<Service> services;
+
+    /**
+     * List dependencies between services (by service name).
+     */
+    private Iterable<Dependency> dependencies;
 
     /**
      * Error message from the server to the client.

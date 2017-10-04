@@ -28,6 +28,7 @@ function()
     (function(app)
     {
         const SERVICES = "SERVICES";
+        const DEPENDENCIES = "DEPENDENCIES";
         const TOKEN = "TOKEN";
         const CREDENTIALS = "CREDENTIALS";
         const ERROR = "ERROR";
@@ -67,6 +68,10 @@ function()
                         parts.push([[SERVICES, message.services[i].name], message.services[i]]);
                     }
                 }
+                if (message.dependencies != null)
+                {
+                    parts.push([DEPENDENCIES, message.dependencies]);
+                }
                 if (message.token != null)
                 {
                     parts.push([TOKEN, message.token]);
@@ -90,6 +95,7 @@ function()
 
         // publish constant subject IDs
         Object.defineProperty(app.subject, SERVICES, { value: SERVICES });
+        Object.defineProperty(app.subject, DEPENDENCIES, { value: DEPENDENCIES });
         Object.defineProperty(app.subject, TOKEN, { value: TOKEN });
         Object.defineProperty(app.subject, CREDENTIALS, { value: CREDENTIALS });
         Object.defineProperty(app.subject, ERROR, { value: ERROR });

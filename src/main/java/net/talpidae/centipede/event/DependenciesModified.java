@@ -17,15 +17,10 @@
 
 package net.talpidae.centipede.event;
 
-import net.talpidae.base.insect.message.payload.Mapping;
-
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
-
-@RequiredArgsConstructor
-@Getter
-public class NewMapping
+/**
+ * Dependencies stores in our database have been changed.
+ */
+public class DependenciesModified
 {
-    private final Mapping mapping;
+
 }

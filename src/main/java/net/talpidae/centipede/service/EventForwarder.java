@@ -2,9 +2,11 @@ package net.talpidae.centipede.service;
 
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+
 import net.talpidae.base.event.Shutdown;
 import net.talpidae.centipede.bean.service.Api;
 import net.talpidae.centipede.database.CentipedeRepository;
+import net.talpidae.centipede.event.DependenciesModified;
 import net.talpidae.centipede.event.ServicesModified;
 
 import javax.inject.Inject;
@@ -37,6 +39,15 @@ public class EventForwarder
     {
         apiBroadcastQueue.add(Api.builder()
                 .services(centipedeRepository.findAll())
+                .build());
+    }
+
+
+    @Subscribe
+    public void onDependenciesModified(DependenciesModified dependenciesModified)
+    {
+        apiBroadcastQueue.add(Api.builder()
+                .dependencies(centipedeRepository.findAllDependencies())
                 .build());
     }
 

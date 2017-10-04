@@ -107,7 +107,13 @@ public class StateMachine implements Runnable
                 {
                     case UP:
                         if (targetState == State.DOWN)
+                        {
                             undergoTransition(service, targetState, txnTargetState, down);
+                        }
+                        else if (targetState == State.OUT_OF_SERVICE)
+                        {
+                            undergoTransition(service, targetState, txnTargetState, up);
+                        }
 
                         break;
 

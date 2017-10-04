@@ -28,6 +28,8 @@ import net.talpidae.base.util.thread.GeneralScheduler;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
+import net.talpidae.centipede.event.DependenciesChanged;
+import net.talpidae.centipede.event.DependenciesModified;
 import net.talpidae.centipede.event.NewMapping;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.task.health.HealthCheck;
@@ -126,6 +128,28 @@ public class CentipedeLogic
             catch (Throwable e)
             {
                 log.error("onNewMapping(): scheduled task failed: {}", e.getMessage(), e);
+            }
+        });
+    }
+
+
+    /**
+     * Dependencies of a service were updated. Track changes in database.
+     */
+    @Subscribe
+    public void onDependenciesChanged(DependenciesChanged dependenciesChanged)
+    {
+        scheduler.schedule(() ->
+        {
+            try
+            {
+                repository.setDependencies(dependenciesChanged.getName(), dependenciesChanged.getDependencies());
+
+                eventBus.post(new DependenciesModified());
+            }
+            catch (Throwable e)
+            {
+                log.error("onDependenciesChanged(): scheduled task failed: {}", e.getMessage(), e);
             }
         });
     }

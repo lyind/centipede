@@ -84,6 +84,7 @@ app.require([
                 }
                 this.template.removeAttribute("hidden");
                 this.template.removeAttribute("id");
+                app.show(this.template);
                 this.documentFragment.appendChild(this.template);
 
                 this.subscription = source.subscribe(this);

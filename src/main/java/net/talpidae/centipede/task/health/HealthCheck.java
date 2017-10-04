@@ -18,6 +18,7 @@
 package net.talpidae.centipede.task.health;
 
 import com.google.common.eventbus.EventBus;
+import com.google.common.net.HostAndPort;
 
 import net.talpidae.base.insect.Queen;
 import net.talpidae.base.insect.config.QueenSettings;
@@ -28,6 +29,7 @@ import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.util.service.ServiceUtil;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -43,6 +45,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+
+import static com.google.common.base.Strings.nullToEmpty;
 
 
 @Slf4j
@@ -145,16 +149,27 @@ public class HealthCheck implements Runnable
 
     private Stream<ServiceInfo> getAliveInsectInfo()
     {
-        val noPulseDownThresholdNanos = TimeUnit.MILLISECONDS.toNanos(queenSettings.getPulseDelay() * 3L);
+        val noPulseDownThresholdNanos = TimeUnit.MILLISECONDS.toNanos(queenSettings.getPulseDelay() * 4L);
         val now = System.nanoTime();
 
         // fill state cache with insect that until recently have a pulse
         return queen.getLiveInsectState()
-                .filter(state -> (now - state.getTimestamp()) < noPulseDownThresholdNanos)
+                .filter(state -> Math.abs(now - state.getTimestamp()) < noPulseDownThresholdNanos)
                 .map(state -> centipedeRepository.findServiceByName(state.getName())
+                        .filter(service -> isSameInstance(service, state))
                         .map(service -> new ServiceInfo(state, service)))
                 .filter(Optional::isPresent)
                 .map(Optional::get);
+    }
+
+
+    private static boolean isSameInstance(Service service, InsectState state)
+    {
+        val socketAddress = state.getSocketAddress();
+        val knownHostAndPort = HostAndPort.fromParts(nullToEmpty(service.getHost()), service.getPort());
+        val instanceHostAndPort = HostAndPort.fromParts(nullToEmpty(socketAddress.getHostString()), socketAddress.getPort());
+
+        return knownHostAndPort.equals(instanceHostAndPort);
     }
 
 

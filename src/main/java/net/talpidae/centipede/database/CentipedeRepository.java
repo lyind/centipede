@@ -17,10 +17,14 @@
 
 package net.talpidae.centipede.database;
 
+import net.talpidae.centipede.bean.service.Dependency;
 import net.talpidae.centipede.bean.service.Service;
+import net.talpidae.centipede.database.dao.DependencyDao;
 import net.talpidae.centipede.database.dao.ServiceDao;
+import net.talpidae.centipede.event.DependenciesChanged;
 
 import org.jdbi.v3.sqlobject.CreateSqlObject;
+import org.jdbi.v3.sqlobject.transaction.Transaction;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +36,9 @@ public interface CentipedeRepository
 {
     @CreateSqlObject
     ServiceDao serviceDao();
+
+    @CreateSqlObject
+    DependencyDao dependencyDao();
 
 
     default void insertServiceConfiguration(Service service)
@@ -76,5 +83,20 @@ public interface CentipedeRepository
     default List<String> findAllNamesIncludingRetired()
     {
         return serviceDao().findAllNamesIncludingRetired();
+    }
+
+    default List<Dependency> findAllDependencies()
+    {
+        return dependencyDao().findAll();
+    }
+
+    @Transaction
+    default void setDependencies(String name, Iterable<String> targets)
+    {
+        val dependencyDao = dependencyDao();
+
+        dependencyDao.deleteDependenciesForName(name);
+
+        dependencyDao.insertChangedDependencies(name, targets);
     }
 }

@@ -5,270 +5,274 @@
 <script src="../core/app.js"></script>
 <div data-keep="fragment/disconnected.fragment.html"></div>
 <div data-keep="fragment/profile.fragment.html"></div>
-<h2 data-id="headline">&nbsp;</h2>
-<div class="columns">
-    <div class="column col-8 col-sm-12">
-        <form data-id="serviceForm" class="form-horizontal">
-            <!-- form input control -->
-            <div class="form-group">
-                <div class="col-3">
-                    <label class="form-label" for="serviceName">Name</label>
+<div>
+    <h2 data-id="headline">&nbsp;</h2>
+    <div class="divider"></div>
+    <div class="columns">
+        <div class="column col-8 col-sm-12">
+            <form data-id="serviceForm" class="form-horizontal">
+                <!-- form input control -->
+                <div class="form-group">
+                    <div class="col-3">
+                        <label class="form-label" for="serviceName">Name</label>
+                    </div>
+                    <div class="col-9">
+                        <input class="form-input" type="text" id="serviceName" data-id="serviceName"
+                               placeholder="Name"/>
+                    </div>
                 </div>
-                <div class="col-9">
-                    <input class="form-input" type="text" id="serviceName" data-id="serviceName"
-                           placeholder="Name"/>
+                <div class="form-group">
+                    <div class="col-3">
+                        <label class="form-label" for="serviceKind">Kind</label>
+                    </div>
+                    <div class="col-3">
+                        <select class="form-select" id="serviceKind" required data-id="serviceKind">
+                            <option>JAVA</option>
+                            <option>NATIVE</option>
+                        </select>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <div class="col-3">
-                    <label class="form-label" for="serviceKind">Kind</label>
-                </div>
-                <div class="col-3">
-                    <select class="form-select" id="serviceKind" required data-id="serviceKind">
-                        <option>JAVA</option>
-                        <option>NATIVE</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-group d-hide" data-id="serviceVmArgumentsGroup">
-                <div class="col-3">
-                    <label class="form-label" for="serviceVmArguments">VM Arguments</label>
-                </div>
-                <div class="col-9">
+                <div class="form-group d-hide" data-id="serviceVmArgumentsGroup">
+                    <div class="col-3">
+                        <label class="form-label" for="serviceVmArguments">VM Arguments</label>
+                    </div>
+                    <div class="col-9">
                     <textarea class="form-input" id="serviceVmArguments"
                               data-id="serviceVmArguments"
                               placeholder="VM Arguments" rows="2"></textarea>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <div class="col-3">
-                    <label class="form-label" for="serviceImage">Image</label>
-                </div>
-                <div class="col-9">
+                <div class="form-group">
+                    <div class="col-3">
+                        <label class="form-label" for="serviceImage">Image</label>
+                    </div>
+                    <div class="col-9">
                     <textarea class="form-input" id="serviceImage" data-id="serviceImage"
                               placeholder="Image" rows="3"></textarea>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <div class="col-3">
-                    <label class="form-label" for="serviceArguments">Arguments</label>
-                </div>
-                <div class="col-9">
+                <div class="form-group">
+                    <div class="col-3">
+                        <label class="form-label" for="serviceArguments">Arguments</label>
+                    </div>
+                    <div class="col-9">
                     <textarea class="form-input" id="serviceArguments" data-id="serviceArguments"
                               placeholder="Arguments" rows="3"></textarea>
+                    </div>
                 </div>
-            </div>
-            <br/>
-            <div class="form-group float-left">
-                <div class="">
-                    <button class="btn btn-remove" type="reset" data-id="serviceEditRetire">Remove
-                    </button>
+                <br/>
+                <div class="form-group float-left">
+                    <div class="">
+                        <button class="btn btn-remove" type="reset" data-id="serviceEditRetire">
+                            Remove
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group float-right">
-                <div class="">
-                    <button class="btn btn-primary" type="submit" data-id="serviceEditSave">Save
-                    </button>
-                    <button class="btn btn-link" type="reset" data-id="serviceEditCancel">Cancel
-                    </button>
+                <div class="form-group float-right">
+                    <div class="">
+                        <button class="btn btn-primary" type="submit" data-id="serviceEditSave">Save
+                        </button>
+                        <button class="btn btn-link" type="reset" data-id="serviceEditCancel">Cancel
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
-<script>
-    "use strict";
-    console.log("[service-edit] init");
+    <script>
+        "use strict";
+        console.log("[service-edit] init");
 
-    app(function (that, app)
-    {
-        const DRAFT_KEY = "service-edit-draft";
-        const KIND_JAVA = "JAVA";
-        const DEFAULT_SERVICE = {isNew: true, kind: KIND_JAVA};
+        app(function (that, app)
+        {
+            const DRAFT_KEY = "service-edit-draft";
+            const KIND_JAVA = "JAVA";
+            const DEFAULT_SERVICE = {isNew: true, kind: KIND_JAVA};
 
-        app.activeRoute
-            .flatMap(function (route)
-            {
-                var name = route.args[0];
-
-                if (!name)
+            app.activeRoute
+                .flatMap(function (route)
                 {
-                    return Rx.Observable.of(app.get(DRAFT_KEY))
-                        .filter(function (draft)
-                        {
-                            return !!draft;
-                        })
-                        .defaultIfEmpty(JSON.stringify(DEFAULT_SERVICE))
-                        .map(JSON.parse)
-                        .do(function (draft)
-                        {
-                            console.log("[service-edit] create new service");
-                        });
-                }
-                else
-                {
-                    // if the ID / name doesn't exist anymore we offer to re-create it
-                    Rx.Observable.of(1)
-                        .delay(0)
-                        .takeUntil(app.navigate())
-                        .subscribe(function ()
-                        {
-                            // make sure we use recent values
-                            app.ws({services: []});
-                        });
+                    var name = route.args[0];
 
-                    return app.broker(app.subject.SERVICES)
-                        .takeUntil(app.navigate())
-                        .take(1)
-                        .filter(function (all)
-                        {
-                            return (all.indexOf(name) >= 0);
-                        })
-                        .flatMap(function ()
-                        {
-                            return app.broker([app.subject.SERVICES, name])
-                                .takeUntil(app.navigate())
-                                .take(1);
-                        })
-                        .filter(function (draft)
-                        {
-                            return !!draft;
-                        })
-                        .defaultIfEmpty(DEFAULT_SERVICE)
-                        .map(Object.assign)
-                        .do(function (draft)
-                        {
-                            if (draft.isNew)
+                    if (!name)
+                    {
+                        return Rx.Observable.of(app.get(DRAFT_KEY))
+                            .filter(function (draft)
                             {
-                                console.log("[service-edit] service doesn't exist, create new service");
+                                return !!draft;
+                            })
+                            .defaultIfEmpty(JSON.stringify(DEFAULT_SERVICE))
+                            .map(JSON.parse)
+                            .do(function (draft)
+                            {
+                                console.log("[service-edit] create new service");
+                            });
+                    }
+                    else
+                    {
+                        // if the ID / name doesn't exist anymore we offer to re-create it
+                        Rx.Observable.of(1)
+                            .delay(0)
+                            .takeUntil(app.navigate())
+                            .subscribe(function ()
+                            {
+                                // make sure we use recent values
+                                app.ws({services: []});
+                            });
+
+                        return app.broker(app.subject.SERVICES)
+                            .takeUntil(app.navigate())
+                            .take(1)
+                            .filter(function (all)
+                            {
+                                return (all.indexOf(name) >= 0);
+                            })
+                            .flatMap(function ()
+                            {
+                                return app.broker([app.subject.SERVICES, name])
+                                    .takeUntil(app.navigate())
+                                    .take(1);
+                            })
+                            .filter(function (draft)
+                            {
+                                return !!draft;
+                            })
+                            .defaultIfEmpty(DEFAULT_SERVICE)
+                            .map(Object.assign)
+                            .do(function (draft)
+                            {
+                                if (draft.isNew)
+                                {
+                                    console.log("[service-edit] service doesn't exist, create new service");
+                                }
+                                else
+                                {
+                                    console.log("[service-edit] edit existing service");
+                                }
+                            });
+                    }
+                })
+                .subscribe(function (model)
+                {
+                    if (model.isNew)
+                    {
+                        that.headline.innerText = "Create new Service";
+                        app.setReadonly(that.serviceName, false);
+                        app.hide(that.serviceEditRetire);
+                    }
+                    else
+                    {
+                        that.headline.innerText = "Edit " + model.name;
+                        app.setReadonly(that.serviceName, true);
+                    }
+
+                    var nameSubject = new Rx.BehaviorSubject(model.name || "");
+                    app.eachInputValue(that.serviceName).subscribe(nameSubject);
+
+                    var kindSubject = new Rx.BehaviorSubject(app.emptyToUndefined(model.kind));
+                    app.eachInputValue(that.serviceKind).map(app.emptyToUndefined).subscribe(kindSubject);
+                    kindSubject
+                        .asObservable()
+                        .takeUntil(app.navigate())
+                        .distinctUntilChanged()
+                        .subscribe(function (kind)
+                        {
+                            if (kind === KIND_JAVA)
+                            {
+                                app.show(that.serviceVmArgumentsGroup);
                             }
                             else
                             {
-                                console.log("[service-edit] edit existing service");
+                                app.hide(that.serviceVmArgumentsGroup);
                             }
                         });
-                }
-            })
-            .subscribe(function (model)
-            {
-                if (model.isNew)
-                {
-                    that.headline.innerText = "Create new Service";
-                    app.setReadonly(that.serviceName, false);
-                    app.hide(that.serviceEditRetire);
-                }
-                else
-                {
-                    that.headline.innerText = "Edit " + model.name;
-                    app.setReadonly(that.serviceName, true);
-                }
 
-                var nameSubject = new Rx.BehaviorSubject(model.name || "");
-                app.eachInputValue(that.serviceName).subscribe(nameSubject);
+                    that.serviceVmArguments.value = model.vmArguments || "";
+                    var vmArgumentsSubject = new Rx.BehaviorSubject(model.vmArguments || "");
+                    app.eachInputValue(that.serviceVmArguments).subscribe(vmArgumentsSubject);
 
-                var kindSubject = new Rx.BehaviorSubject(app.emptyToUndefined(model.kind));
-                app.eachInputValue(that.serviceKind).map(app.emptyToUndefined).subscribe(kindSubject);
-                kindSubject
-                    .asObservable()
-                    .takeUntil(app.navigate())
-                    .distinctUntilChanged()
-                    .subscribe(function (kind)
-                    {
-                        if (kind === KIND_JAVA)
+                    var imageSubject = new Rx.BehaviorSubject(model.image || "");
+                    app.eachInputValue(that.serviceImage).subscribe(imageSubject);
+
+                    var argumentsSubject = new Rx.BehaviorSubject(model.arguments || "");
+                    app.eachInputValue(that.serviceArguments).subscribe(argumentsSubject);
+
+                    // handle changes (auto-save if model.isNew == true)
+                    Rx.Observable.empty()
+                        .merge(
+                            nameSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "name")),
+                            kindSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "kind")),
+                            vmArgumentsSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "vmArguments")),
+                            imageSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "image")),
+                            argumentsSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "arguments"))
+                        )
+                        .takeUntil(app.navigate())
+                        .subscribe(function (changedModel)
                         {
-                            app.show(that.serviceVmArgumentsGroup);
-                        }
-                        else
+                            model = changedModel;
+
+                            that.serviceName.value = model.name;
+                            that.serviceKind.value = model.kind;
+                            that.serviceVmArguments.value = model.vmArguments;
+                            that.serviceImage.value = model.image;
+                            that.serviceArguments.value = model.arguments;
+
+                            app.set(DRAFT_KEY, JSON.stringify(model));
+                        });
+
+                    app.eachSubmit(that.serviceForm)
+                        .map(function ()
                         {
-                            app.hide(that.serviceVmArgumentsGroup);
-                        }
-                    });
+                            return {services: [model]};
+                        })
+                        .do(app.ws) // send model to server
+                        .flatMap(function ()
+                        {
+                            return app.broker([app.subject.SERVICES, model.name]);
+                        })
+                        .takeUntil(app.navigate())
+                        .take(1)
+                        .subscribe(function ()
+                        {
+                            app.remove(DRAFT_KEY); // remove draft
+                            app.navigate("..");
+                        });
 
-                that.serviceVmArguments.value = model.vmArguments || "";
-                var vmArgumentsSubject = new Rx.BehaviorSubject(model.vmArguments || "");
-                app.eachInputValue(that.serviceVmArguments).subscribe(vmArgumentsSubject);
+                    // handle retiring
+                    app.eachClickUntilNavigate(that.serviceEditRetire)
+                        .do(function ()
+                        {
+                            model.retired = true;
+                        })
+                        .map(function ()
+                        {
+                            return {services: [model]};
+                        })
+                        .do(app.ws) // send model to server
+                        .flatMap(function ()
+                        {
+                            return app.broker(app.subject.SERVICES)
+                                .map(function (services)
+                                {
+                                    return services.indexOf(model.name) < 0;
+                                });
+                        })
+                        .takeUntil(app.navigate())
+                        .take(1)
+                        .subscribe(function ()
+                        {
+                            app.remove(DRAFT_KEY); // remove draft
+                            app.navigate("..");
+                        });
+                });
 
-                var imageSubject = new Rx.BehaviorSubject(model.image || "");
-                app.eachInputValue(that.serviceImage).subscribe(imageSubject);
-
-                var argumentsSubject = new Rx.BehaviorSubject(model.arguments || "");
-                app.eachInputValue(that.serviceArguments).subscribe(argumentsSubject);
-
-                // handle changes (auto-save if model.isNew == true)
-                Rx.Observable.empty()
-                    .merge(
-                        nameSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "name")),
-                        kindSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "kind")),
-                        vmArgumentsSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "vmArguments")),
-                        imageSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "image")),
-                        argumentsSubject.asObservable().takeUntil(app.navigate()).map(app.setter(model, "arguments"))
-                    )
-                    .takeUntil(app.navigate())
-                    .subscribe(function (changedModel)
-                    {
-                        model = changedModel;
-
-                        that.serviceName.value = model.name;
-                        that.serviceKind.value = model.kind;
-                        that.serviceVmArguments.value = model.vmArguments;
-                        that.serviceImage.value = model.image;
-                        that.serviceArguments.value = model.arguments;
-
-                        app.set(DRAFT_KEY, JSON.stringify(model));
-                    });
-
-                app.eachSubmit(that.serviceForm)
-                    .map(function ()
-                    {
-                        return {services: [model]};
-                    })
-                    .do(app.ws) // send model to server
-                    .flatMap(function ()
-                    {
-                        return app.broker([app.subject.SERVICES, model.name]);
-                    })
-                    .takeUntil(app.navigate())
-                    .take(1)
-                    .subscribe(function ()
-                    {
-                        app.remove(DRAFT_KEY); // remove draft
-                        app.navigate("..");
-                    });
-
-                // handle retiring
-                app.eachClickUntilNavigate(that.serviceEditRetire)
-                    .do(function ()
-                    {
-                        model.retired = true;
-                    })
-                    .map(function ()
-                    {
-                        return {services: [model]};
-                    })
-                    .do(app.ws) // send model to server
-                    .flatMap(function ()
-                    {
-                        return app.broker(app.subject.SERVICES)
-                            .map(function(services)
-                            {
-                                return services.indexOf(model.name) < 0;
-                            });
-                    })
-                    .takeUntil(app.navigate())
-                    .take(1)
-                    .subscribe(function ()
-                    {
-                        app.remove(DRAFT_KEY); // remove draft
-                        app.navigate("..");
-                    });
-            });
-
-        // cancel
-        app.eachClickUntilNavigate(that.serviceEditCancel)
-            .subscribe(function ()
-            {
-                app.remove(DRAFT_KEY); // remove draft
-                app.navigate("..");
-            });
-    });
-</script>
+            // cancel
+            app.eachClickUntilNavigate(that.serviceEditCancel)
+                .subscribe(function ()
+                {
+                    app.remove(DRAFT_KEY); // remove draft
+                    app.navigate("..");
+                });
+        });
+    </script>
+</div>

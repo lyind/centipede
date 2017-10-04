@@ -27,20 +27,20 @@
             <button data-id="createService" class="btn btn-primary">Create</button>
             <button data-id="exportServices" class="btn btn-primary">Export</button>
             <button data-id="importServices" class="btn btn-primary">Import</button>
+            <button data-id="showDependencies" class="btn btn-primary">Dependencies</button>
         </div>
     </h2>
     <div class="divider"></div>
     <div data-id="serviceList" class="columns">
         <div data-id="serviceTemplate"
-             class="column col-3 col-xl-4 col-lg-4 col-md-6 col-sm-10 col-xs-12">
+             class="column col-3 col-xl-4 col-lg-4 col-md-6 col-sm-10 col-xs-12 d-hide">
             <div class="service-panel">
-                <div data-id="serviceLoading" class="loading"></div>
                 <div class="columns">
                     <img data-id="serviceStateGlyph" class="no-touch column col-3"
                          src="pic/unknown.svg">
                     <div class="column col-9">
-                        <div data-id="serviceName" class="panel-title text-ellipsis"></div>
-                        <div data-id="serviceRoute" class="panel-subtitle text-ellipsis"></div>
+                        <div data-id="serviceName" class="panel-title text-ellipsis">&nbsp;</div>
+                        <div data-id="serviceRoute" class="panel-subtitle text-ellipsis">&nbsp;</div>
                         <div class="divider"></div>
                         <div class="btn-group">
                             <button data-id="serviceEnableButton" class="btn circle btn-sm active">
@@ -92,7 +92,6 @@
                                     .takeUntil(itemRemoved)
                                     .subscribe(function (service)
                                     {
-                                        app.hide(added.serviceLoading);
                                         added.serviceName.innerText = service.name;
                                         added.serviceRoute.innerText = (service.route) ? service.route : '[no route]';
 
@@ -306,6 +305,12 @@
                     return {services: services};
                 })
                 .subscribe(app.ws);
+
+            app.eachClickUntilNavigate(that.showDependencies)
+                .subscribe(function ()
+                {
+                    app.navigate("dependencies.html");
+                });
         });
     </script>
 </div>
