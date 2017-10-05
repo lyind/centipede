@@ -166,7 +166,9 @@ public class HealthCheck implements Runnable
     private static boolean isSameInstance(Service service, InsectState state)
     {
         val socketAddress = state.getSocketAddress();
-        val knownHostAndPort = HostAndPort.fromParts(nullToEmpty(service.getHost()), firstNonNull(service.getPort(), 0));
+        val servicePort = firstNonNull(service.getPort(), 0);
+
+        val knownHostAndPort = HostAndPort.fromParts(nullToEmpty(service.getHost()), servicePort >= 0 ? servicePort : 0);
         val instanceHostAndPort = HostAndPort.fromParts(nullToEmpty(socketAddress.getHostString()), socketAddress.getPort());
 
         return knownHostAndPort.equals(instanceHostAndPort);
