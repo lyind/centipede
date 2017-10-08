@@ -32,7 +32,7 @@ import lombok.Getter;
 @Getter
 public class CentipedeDefaultDataBaseConfig extends DefaultDataBaseConfig
 {
-    private final int maximumPoolSize = 1;   // not sure if it's safe to use more on SQLite3
+    private final int maximumPoolSize = 2;   // safe to use more on SQLite3, since we cleanly close() the pool
 
     private final String jdbcUrl = "jdbc:sqlite:centipede.db";
 

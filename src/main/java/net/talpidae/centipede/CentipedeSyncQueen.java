@@ -22,10 +22,12 @@ import com.google.common.eventbus.EventBus;
 import net.talpidae.base.insect.SyncQueen;
 import net.talpidae.base.insect.config.QueenSettings;
 import net.talpidae.base.insect.message.payload.Mapping;
+import net.talpidae.base.insect.message.payload.Metrics;
 import net.talpidae.base.insect.state.InsectState;
 import net.talpidae.base.server.ServerConfig;
 import net.talpidae.centipede.event.DependenciesChanged;
 import net.talpidae.centipede.event.NewMapping;
+import net.talpidae.centipede.event.NewMetrics;
 
 import java.net.InetSocketAddress;
 
@@ -77,5 +79,12 @@ public class CentipedeSyncQueen extends SyncQueen
     protected void handleDependenciesChanged(InsectState insectState)
     {
         eventBus.post(new DependenciesChanged(insectState.getName(), insectState.getDependencies()));
+    }
+
+
+    @Override
+    protected void handleMetrics(Metrics metrics)
+    {
+        eventBus.post(new NewMetrics(metrics.getMetrics()));
     }
 }

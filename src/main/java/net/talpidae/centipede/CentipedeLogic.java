@@ -31,6 +31,7 @@ import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.DependenciesChanged;
 import net.talpidae.centipede.event.DependenciesModified;
 import net.talpidae.centipede.event.NewMapping;
+import net.talpidae.centipede.event.NewMetrics;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.task.health.HealthCheck;
 import net.talpidae.centipede.task.init.InitTask;
@@ -150,6 +151,26 @@ public class CentipedeLogic
             catch (Throwable e)
             {
                 log.error("onDependenciesChanged(): scheduled task failed: {}", e.getMessage(), e);
+            }
+        });
+    }
+
+
+    /**
+     * Received new metrics from a slave.
+     */
+    @Subscribe
+    public void onNewMetrics(NewMetrics newMetrics)
+    {
+        scheduler.schedule(() ->
+        {
+            try
+            {
+                repository.insertMetrics(newMetrics.getMetrics());
+            }
+            catch (Throwable e)
+            {
+                log.error("onNewMetrics(): scheduled task failed: {}", e.getMessage(), e);
             }
         });
     }

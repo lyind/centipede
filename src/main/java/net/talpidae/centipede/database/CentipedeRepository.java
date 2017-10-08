@@ -17,11 +17,12 @@
 
 package net.talpidae.centipede.database;
 
+import net.talpidae.base.util.performance.Metric;
 import net.talpidae.centipede.bean.service.Dependency;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.database.dao.DependencyDao;
+import net.talpidae.centipede.database.dao.MetricDao;
 import net.talpidae.centipede.database.dao.ServiceDao;
-import net.talpidae.centipede.event.DependenciesChanged;
 
 import org.jdbi.v3.sqlobject.CreateSqlObject;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
@@ -36,6 +37,9 @@ public interface CentipedeRepository
 {
     @CreateSqlObject
     ServiceDao serviceDao();
+
+    @CreateSqlObject
+    MetricDao metricDao();
 
     @CreateSqlObject
     DependencyDao dependencyDao();
@@ -98,5 +102,11 @@ public interface CentipedeRepository
         dependencyDao.deleteDependenciesForName(name);
 
         dependencyDao.insertChangedDependencies(name, targets);
+    }
+
+
+    default void insertMetrics(Iterable<Metric> metrics)
+    {
+        metricDao().insertMetrics(metrics);
     }
 }
