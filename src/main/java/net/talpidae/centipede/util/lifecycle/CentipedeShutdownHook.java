@@ -3,6 +3,7 @@ package net.talpidae.centipede.util.lifecycle;
 import com.google.common.eventbus.EventBus;
 
 import net.talpidae.base.event.Shutdown;
+import net.talpidae.base.util.lifecycle.DefaultShutdownHook;
 import net.talpidae.base.util.lifecycle.ShutdownHook;
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.Frozen;
@@ -16,7 +17,6 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 
 
 @Slf4j
@@ -29,7 +29,8 @@ public class CentipedeShutdownHook extends ShutdownHook
     @Inject
     public CentipedeShutdownHook(CentipedeRepository repository,
                                  EventBus eventBus,
-                                 TransitionDown down)
+                                 TransitionDown down,
+                                 DefaultShutdownHook defaultShutdownHook)
     {
         super(() ->
         {
@@ -70,6 +71,8 @@ public class CentipedeShutdownHook extends ShutdownHook
             {
                 log.warn("shutdown of local services interrupted");
             }
+
+            defaultShutdownHook.run();
         });
     }
 }
