@@ -63,9 +63,9 @@ public class CentipedeSyncQueen extends SyncQueen
 
 
     @Override
-    protected void postHandleMapping(InsectState state, Mapping mapping, boolean isNewMapping)
+    protected void postHandleMapping(InsectState state, Mapping mapping, boolean isNewMapping, boolean isDependencyMapping)
     {
-        super.postHandleMapping(state, mapping, isNewMapping);
+        super.postHandleMapping(state, mapping, isNewMapping, isDependencyMapping);
 
         // update DB state
         if (isNewMapping)

@@ -63,6 +63,8 @@ public class HealthCheck implements Runnable
 
     private final EventBus eventBus;
 
+    private final long noPulseDownThresholdNanos;
+
 
     @Inject
     public HealthCheck(Queen queen, QueenSettings queenSettings, CentipedeRepository centipedeRepository, EventBus eventBus)
@@ -71,6 +73,7 @@ public class HealthCheck implements Runnable
         this.queenSettings = queenSettings;
         this.centipedeRepository = centipedeRepository;
         this.eventBus = eventBus;
+        this.noPulseDownThresholdNanos = TimeUnit.MILLISECONDS.toNanos(queenSettings.getPulseDelay() * 3);
     }
 
 
@@ -84,6 +87,16 @@ public class HealthCheck implements Runnable
         return state != State.DOWN && state != State.CHANGING && !(state == State.UNKNOWN && ServiceUtil.hasValidPid(service));
     }
 
+    private static boolean isSameInstance(Service service, InsectState state)
+    {
+        val socketAddress = state.getSocketAddress();
+        val servicePort = firstNonNull(service.getPort(), 0);
+
+        val knownHostAndPort = HostAndPort.fromParts(nullToEmpty(service.getHost()), servicePort >= 0 ? servicePort : 0);
+        val instanceHostAndPort = HostAndPort.fromParts(nullToEmpty(socketAddress.getHostString()), socketAddress.getPort());
+
+        return knownHostAndPort.equals(instanceHostAndPort);
+    }
 
     /**
      * Compares current state with the database and updates it accordingly.
@@ -146,10 +159,8 @@ public class HealthCheck implements Runnable
         }
     }
 
-
     private Stream<ServiceInfo> getAliveInsectInfo()
     {
-        val noPulseDownThresholdNanos = TimeUnit.MILLISECONDS.toNanos(queenSettings.getPulseDelay() * 4L);
         val now = System.nanoTime();
 
         // fill state cache with insect that until recently have a pulse
@@ -160,18 +171,6 @@ public class HealthCheck implements Runnable
                         .map(service -> new ServiceInfo(state, service)))
                 .filter(Optional::isPresent)
                 .map(Optional::get);
-    }
-
-
-    private static boolean isSameInstance(Service service, InsectState state)
-    {
-        val socketAddress = state.getSocketAddress();
-        val servicePort = firstNonNull(service.getPort(), 0);
-
-        val knownHostAndPort = HostAndPort.fromParts(nullToEmpty(service.getHost()), servicePort >= 0 ? servicePort : 0);
-        val instanceHostAndPort = HostAndPort.fromParts(nullToEmpty(socketAddress.getHostString()), socketAddress.getPort());
-
-        return knownHostAndPort.equals(instanceHostAndPort);
     }
 
 
