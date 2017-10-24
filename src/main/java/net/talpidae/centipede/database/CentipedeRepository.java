@@ -105,8 +105,10 @@ public interface CentipedeRepository
     }
 
 
+    @Transaction
     default void insertMetrics(Iterable<Metric> metrics)
     {
+        metricDao().insertMetricPaths(metrics);
         metricDao().insertMetrics(metrics);
     }
 }

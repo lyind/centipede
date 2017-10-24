@@ -25,11 +25,12 @@ import org.jdbi.v3.sqlobject.statement.SqlBatch;
 
 public interface MetricDao
 {
-    @SqlBatch("INSERT OR IGNORE INTO metric_path (path) VALUES (:path);\n"
-            + "INSERT INTO metric (pathId, ts, value) (\n"
-            + "  SELECT id, :ts, :value\n"
+    @SqlBatch("INSERT OR IGNORE INTO metric_path (path) VALUES (:metric.path)")
+    void insertMetricPaths(@BindBean("metric") Iterable<Metric> metric);
+
+    @SqlBatch("INSERT OR IGNORE INTO metric (pathId, ts, value)\n"
+            + "  SELECT id AS pathId, :metric.ts AS ts, :metric.value AS value\n"
             + "  FROM metric_path\n"
-            + "  WHERE path = :path"
-            + ")")
+            + "  WHERE path = :metric.path")
     void insertMetrics(@BindBean("metric") Iterable<Metric> metric);
 }
