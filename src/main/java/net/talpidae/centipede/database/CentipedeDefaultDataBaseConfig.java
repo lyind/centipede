@@ -59,5 +59,7 @@ public class CentipedeDefaultDataBaseConfig extends DefaultDataBaseConfig
         dataSourceProperties.put("prepStmtCacheSize", "250");
         dataSourceProperties.put("prepStmtCacheSqlLimit", "2048");
         dataSourceProperties.put("journal_mode", "WAL");
+        dataSourceProperties.put("cache", "shared");
+        dataSourceProperties.put("case_sensitive_like", "ON");
     }
 }

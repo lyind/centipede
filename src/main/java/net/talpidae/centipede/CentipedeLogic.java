@@ -25,6 +25,7 @@ import net.talpidae.base.event.ServerShutdown;
 import net.talpidae.base.event.ServerStarted;
 import net.talpidae.base.insect.Queen;
 import net.talpidae.base.util.thread.GeneralScheduler;
+import net.talpidae.centipede.bean.configuration.Configuration;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
@@ -35,6 +36,7 @@ import net.talpidae.centipede.event.NewMetrics;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.task.health.HealthCheck;
 import net.talpidae.centipede.task.init.InitTask;
+import net.talpidae.centipede.task.maintenance.MaintenanceTask;
 import net.talpidae.centipede.task.state.StateMachine;
 
 import java.io.IOException;
@@ -71,7 +73,9 @@ public class CentipedeLogic
                           HealthCheck pulseCheck,
                           StateMachine stateMachine,
                           Queen queen,
-                          InitTask initTask)
+                          Configuration configuration,
+                          InitTask initTask,
+                          MaintenanceTask maintenanceTask)
     {
         this.repository = repository;
         this.eventBus = eventBus;
@@ -84,6 +88,8 @@ public class CentipedeLogic
 
         // initialize service database immediately
         scheduler.schedule(initTask);
+        scheduler.schedule(maintenanceTask); // perform immediate maintenance
+        scheduler.scheduleWithFixedDelay(maintenanceTask, configuration.getMaintenanceIntervalMinutes(), configuration.getMaintenanceIntervalMinutes(), TimeUnit.MINUTES);
     }
 
 

@@ -19,8 +19,13 @@ package net.talpidae.centipede.database.dao;
 
 import net.talpidae.base.util.performance.Metric;
 
+import org.jdbi.v3.sqlobject.customizer.Bind;
 import org.jdbi.v3.sqlobject.customizer.BindBean;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
+import org.jdbi.v3.sqlobject.statement.SqlQuery;
+import org.jdbi.v3.sqlobject.statement.SqlUpdate;
+
+import java.util.List;
 
 
 public interface MetricDao
@@ -28,9 +33,22 @@ public interface MetricDao
     @SqlBatch("INSERT OR IGNORE INTO metric_path (path) VALUES (:metric.path)")
     void insertMetricPaths(@BindBean("metric") Iterable<Metric> metric);
 
-    @SqlBatch("INSERT OR IGNORE INTO metric (pathId, ts, value)\n"
-            + "  SELECT id AS pathId, :metric.ts AS ts, :metric.value AS value\n"
+    @SqlBatch("INSERT OR IGNORE INTO metric (ts, pathId, value)\n"
+            + "  SELECT CAST(((:metric.ts * 1000000) + abs(random() % 1000000)) AS INTEGER) AS ts, id AS pathId, :metric.value AS value\n"
             + "  FROM metric_path\n"
             + "  WHERE path = :metric.path")
     void insertMetrics(@BindBean("metric") Iterable<Metric> metric);
+
+    @SqlUpdate("DELETE FROM metric WHERE ts < (:newEpochMillies * 1000000)")
+    int deleteMetricsBefore(@Bind("newEpochMillies") long newEpochMillies);
+
+    @SqlUpdate("DELETE FROM metric_path WHERE NOT EXISTS (SELECT 1 FROM metric WHERE id = pathId)")
+    int deleteOrphanedPaths();
+
+    @SqlQuery("SELECT mp1.path, m1.ts, m1.value\n"
+            + "FROM metric m1\n"
+            + "INNER JOIN metric_path mp1 ON (mp1.id = m1.pathId)\n"
+            + "WHERE mp1.path LIKE :pathPrefix || '%'\n"
+            + "AND (m1.ts >= (:begin * 1000000) AND m1.ts <= (:end * 1000000))")
+    List<Metric> findMetricsByPathPrefixAndRange(@Bind("pathPrefix") String prefix, @Bind("begin") long beginTimeMillies, @Bind("end") long endTimeMillies);
 }

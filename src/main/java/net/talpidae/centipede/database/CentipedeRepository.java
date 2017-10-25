@@ -111,4 +111,16 @@ public interface CentipedeRepository
         metricDao().insertMetricPaths(metrics);
         metricDao().insertMetrics(metrics);
     }
+
+
+    default int deleteMetricsBefore(long newEpochMillies)
+    {
+        return metricDao().deleteMetricsBefore(newEpochMillies);
+    }
+
+
+    default int deleteOrphanedPaths()
+    {
+        return metricDao().deleteOrphanedPaths();
+    }
 }
