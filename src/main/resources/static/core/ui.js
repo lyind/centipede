@@ -410,7 +410,7 @@ app.require([
                 }
             });
 
-            // create a function that, when called, updates the named property on subject and returns subject
+            // create a function that, when called, retrieves the named property on subject and returns it
             Object.defineProperty(app, "getter", {
                 value: function(subject, property)
                 {

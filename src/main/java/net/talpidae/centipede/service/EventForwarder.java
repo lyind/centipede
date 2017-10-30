@@ -4,9 +4,11 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 
 import net.talpidae.base.event.Shutdown;
-import net.talpidae.centipede.bean.service.Api;
+import net.talpidae.centipede.bean.Api;
+import net.talpidae.centipede.bean.metric.MetricStatView;
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.DependenciesModified;
+import net.talpidae.centipede.event.NewMetricStats;
 import net.talpidae.centipede.event.ServicesModified;
 
 import javax.inject.Inject;
@@ -48,6 +50,17 @@ public class EventForwarder
     {
         apiBroadcastQueue.add(Api.builder()
                 .dependencies(centipedeRepository.findAllDependencies())
+                .build());
+    }
+
+
+    @Subscribe
+    public void onNewMetricStats(NewMetricStats newMetricStats)
+    {
+        apiBroadcastQueue.add(Api.builder()
+                .metricStats(MetricStatView.builder()
+                        .metricStats(centipedeRepository.findMostRecentMetricStatsByPathPrefix(null))
+                        .build())
                 .build());
     }
 

@@ -15,9 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package net.talpidae.centipede.bean.service;
+package net.talpidae.centipede.bean;
 
 import net.talpidae.base.util.auth.Credentials;
+import net.talpidae.centipede.bean.dependency.Dependency;
+import net.talpidae.centipede.bean.metric.MetricStatView;
+import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.service.wrapper.CallContext;
 
 import lombok.Builder;
@@ -60,6 +63,11 @@ public class Api
      * List dependencies between services (by service name).
      */
     private Iterable<Dependency> dependencies;
+
+    /**
+     * Metrics query and result.
+     */
+    private MetricStatView metricStats;
 
     /**
      * Error message from the server to the client.

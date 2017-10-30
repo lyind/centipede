@@ -65,6 +65,10 @@ public class CentipedeLogic
 
     private final Queen queen;
 
+    private final MaintenanceTask maintenanceTask;
+
+    private final Configuration configuration;
+
 
     @Inject
     public CentipedeLogic(CentipedeRepository repository,
@@ -83,13 +87,14 @@ public class CentipedeLogic
         this.pulseCheck = pulseCheck;
         this.stateMachine = stateMachine;
         this.queen = queen;
+        this.maintenanceTask = maintenanceTask;
+        this.configuration = configuration;
 
         eventBus.register(this);
 
         // initialize service database immediately
         scheduler.schedule(initTask);
         scheduler.schedule(maintenanceTask); // perform immediate maintenance
-        scheduler.scheduleWithFixedDelay(maintenanceTask, configuration.getMaintenanceIntervalMinutes(), configuration.getMaintenanceIntervalMinutes(), TimeUnit.MINUTES);
     }
 
 
@@ -106,6 +111,9 @@ public class CentipedeLogic
 
         // don't try starting services while we are still waiting for externally launched services state
         scheduler.scheduleWithFixedDelay(stateMachine, 7000L, 1000L, TimeUnit.MILLISECONDS);
+
+        // start periodic DB maintenance service
+        scheduler.scheduleWithFixedDelay(maintenanceTask, configuration.getMaintenanceIntervalMinutes(), configuration.getMaintenanceIntervalMinutes(), TimeUnit.MINUTES);
     }
 
 

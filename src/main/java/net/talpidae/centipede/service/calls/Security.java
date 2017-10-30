@@ -27,7 +27,7 @@ import net.talpidae.base.util.auth.Authenticator;
 import net.talpidae.base.util.auth.Credentials;
 import net.talpidae.base.util.session.Session;
 import net.talpidae.base.util.session.SessionService;
-import net.talpidae.centipede.bean.service.Api;
+import net.talpidae.centipede.bean.Api;
 
 import javax.inject.Inject;
 import java.util.Optional;

@@ -17,68 +17,60 @@
 
 package net.talpidae.centipede.service.calls;
 
-import com.google.common.eventbus.EventBus;
-import lombok.Getter;
-import lombok.val;
 import net.talpidae.centipede.bean.Api;
 import net.talpidae.centipede.database.CentipedeRepository;
-import net.talpidae.centipede.event.ServicesModified;
+
+import java.time.OffsetDateTime;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.ArrayList;
-import java.util.Collections;
+
+import lombok.Getter;
+import lombok.val;
 
 
 @Getter
 @Singleton
-public class Services implements CallHandler
+public class MetricStats implements CallHandler
 {
     private final Phase phase = Phase.HANDLE;
 
     private final CentipedeRepository centipedeRepository;
 
-    private final EventBus eventBus;
-
 
     @Inject
-    public Services(CentipedeRepository centipedeRepository, EventBus eventBus)
+    public MetricStats(CentipedeRepository centipedeRepository)
     {
         this.centipedeRepository = centipedeRepository;
-        this.eventBus = eventBus;
     }
 
 
     @Override
     public Api apply(Api request)
     {
-        if (request != null && request.getServices() != null)
+        if (request != null && request.getMetricStats() != null)
         {
-            val serviceIterator = request.getServices().iterator();
+            val metricStatView = request.getMetricStats();
+            val pathPrefix = metricStatView.getPathPrefix();  // null -> no filtering by path
 
-            // accept changes if there are any
-            if (serviceIterator.hasNext())
+            val builder = metricStatView.toBuilder();
+            val requestBegin = metricStatView.getBegin();
+            val requestEnd = metricStatView.getEnd();
+            if (requestBegin == null && requestEnd == null)
             {
-                val names = new ArrayList<String>();
-                while (serviceIterator.hasNext())
-                {
-                    val service = serviceIterator.next();
-
-                    // TODO Add some validation here.
-
-                    centipedeRepository.insertServiceConfiguration(service);
-                    names.add(service.getName());
-                }
-
-                eventBus.post(new ServicesModified(Collections.unmodifiableList(names)));
-
-                request.setServices(null);
+                // return just the most recent newest record
+                builder.metricStats(centipedeRepository.findMostRecentMetricStatsByPathPrefix(pathPrefix));
             }
             else
             {
-                // fulfill list request
-                request.setServices(centipedeRepository.findAll());
+                // return all records within the specified range
+                val begin = (requestBegin != null) ? requestBegin : OffsetDateTime.MIN;
+                val end = (requestEnd != null) ? requestEnd : OffsetDateTime.MAX;
+                builder.metricStats(centipedeRepository.findMetricStatsByPathPrefixAndRange(pathPrefix, begin.toInstant().toEpochMilli(), end.toInstant().toEpochMilli()));
             }
+
+            // fulfill metrics request
+            request.setMetricStats(builder.build());
         }
 
         return request;

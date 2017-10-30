@@ -17,7 +17,7 @@
 
 package net.talpidae.centipede.service.calls;
 
-import net.talpidae.centipede.bean.service.Api;
+import net.talpidae.centipede.bean.Api;
 
 import java.util.function.Function;
 

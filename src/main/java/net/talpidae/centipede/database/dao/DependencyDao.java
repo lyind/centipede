@@ -17,7 +17,7 @@
 
 package net.talpidae.centipede.database.dao;
 
-import net.talpidae.centipede.bean.service.Dependency;
+import net.talpidae.centipede.bean.dependency.Dependency;
 
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.Bind;

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../core/app.css">
+<title>Centipede - Metrics</title>
+<script src="../core/app.js"></script>
+<div data-keep="fragment/disconnected.fragment.html"></div>
+<div data-keep="fragment/profile.fragment.html"></div>
+<div>
+    <h2>
+        <span class="hide-xs">Metrics</span>
+        <span class="show-xs">&#x200B;</span>
+        <div class="absolute" style="left:unset; top: 0; right: 6rem">
+            <button data-id="metricsCancel" class="btn btn-primary">Back</button>
+        </div>
+    </h2>
+    <div class="divider"></div>
+    <h5 data-id="metricPeriod">&nbsp;</h5>
+    <table class="table table-striped table-hover">
+        <thead>
+        <tr>
+            <th>Metric Prefix</th>
+            <th>Requests</th>
+            <th>t Min (s)</th>
+            <th>t Avg (s)</th>
+            <th>t Max (s)</th>
+            <th>2xx %</th>
+            <th>3xx %</th>
+            <th>4xx %</th>
+            <th>5xx %</th>
+            <th>Heap (MB)</th>
+            <th>Non-Heap (MB)</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr data-id="metricTemplate" class="active d-hide">
+            <td data-id="metricPathPrefix">&nbsp;</td>
+            <td data-id="metricTotal">&nbsp;</td>
+            <td data-id="metricMinTime">&nbsp;</td>
+            <td data-id="metricAvgTime">&nbsp;</td>
+            <td data-id="metricMaxTime">&nbsp;</td>
+            <td data-id="metricStatus2xx">&nbsp;</td>
+            <td data-id="metricStatus3xx">&nbsp;</td>
+            <td data-id="metricStatus4xx">&nbsp;</td>
+            <td data-id="metricStatus5xx">&nbsp;</td>
+            <td data-id="metricMaxHeap">&nbsp;</td>
+            <td data-id="metricMaxNonHeap">&nbsp;</td>
+        </tr>
+        </tbody>
+    </table>
+    <script>
+        "use strict";
+        console.log("[metric-stats] init");
+
+        app(function (that, app)
+        {
+            app.require("core/array-adapter.js",
+                function ()
+                {
+                    var metrics = app.broker(app.subject.TOKEN)
+                        .takeUntil(app.navigate())
+                        .filter(function (token)
+                        {
+                            return !!token;
+                        })
+                        .flatMap(function ()
+                        {
+                            return app.broker(app.subject.METRIC_STATS)
+                                .subscribeOn(Rx.Scheduler.asap)
+                                .takeUntil(app.navigate())
+                                .filter(function (view)
+                                {
+                                    // only accept most recent stats update
+                                    return !view.pathPrefix
+                                        && !view.begin
+                                        && !view.end;
+                                })
+                                .pluck("metricStats");
+                        });
+
+                    var filterIsoDate = function(date)
+                    {
+                        return date.substr(0, date.indexOf('.')).replace('T', ' ');
+                    };
+
+                    // update "current period" indicator
+                    metrics.takeUntil(app.navigate())
+                        .map(function (metricStat)
+                        {
+                            if (metricStat && metricStat.length)
+                            {
+                                return "" + filterIsoDate(metricStat[0].begin) + " \u2192 "
+                                    + filterIsoDate(metricStat[0].end);
+                            }
+                            else
+                            {
+                                return "The current period is empty";
+                            }
+                        })
+                        .subscribe(function (periodText)
+                        {
+                            that.metricPeriod.innerText = periodText;
+                        });
+
+                    var adapter = app.arrayAdapter(that.metricTemplate, metrics, function (metricStat)
+                    {
+                        return metricStat.pathPrefix;
+                    });
+
+                    adapter.added()
+                        .takeUntil(app.navigate())
+                        .subscribe(function (added)
+                        {
+                            var itemRemoved = app.navigate().merge(added.removed);
+
+                            metrics.takeUntil(itemRemoved)
+                                .concatAll()
+                                .filter(function (metricStat)
+                                {
+                                    return metricStat.pathPrefix === added.value.pathPrefix;
+                                })
+                                .subscribe(function (metricStat)
+                                {
+                                    added.metricPathPrefix.innerText = metricStat.pathPrefix;
+                                    added.metricTotal.innerText = metricStat.total;
+                                    added.metricMinTime.innerText = metricStat.minTime;
+                                    added.metricAvgTime.innerText = metricStat.avgTime;
+                                    added.metricMaxTime.innerText = metricStat.maxTime;
+                                    added.metricStatus2xx.innerText = metricStat.status2xx;
+                                    added.metricStatus3xx.innerText = metricStat.status3xx;
+                                    added.metricStatus4xx.innerText = metricStat.status4xx;
+                                    added.metricStatus5xx.innerText = metricStat.status5xx;
+                                    added.metricMaxHeap.innerText = metricStat.maxHeap;
+                                    added.metricMaxNonHeap.innerText = metricStat.maxNonHeap;
+                                });
+                        });
+
+                    app.broker(app.subject.TOKEN)
+                        .distinctUntilChanged()
+                        .merge(app.brokerEvent(app.subject.OVERFLOW))
+                        .takeUntil(app.navigate())
+                        .map(function (token)
+                        {
+                            return {metricStats: {}};
+                        })
+                        .subscribe(function (request)
+                        {
+                            console.log("[metric-stats] requesting most recent metric stats");
+                            app.ws(request);
+                        });
+                });
+
+            // cancel/back
+            app.eachClickUntilNavigate(that.metricsCancel)
+                .subscribe(function ()
+                {
+                    app.navigate("..");
+                });
+        });
+    </script>
+</div>

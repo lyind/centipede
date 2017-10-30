@@ -1,7 +1,9 @@
-package net.talpidae.centipede.bean.service;
+package net.talpidae.centipede.bean.dependency;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import net.talpidae.centipede.bean.service.State;
 
 import org.jdbi.v3.core.mapper.reflect.ColumnName;
 

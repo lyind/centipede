@@ -108,8 +108,6 @@ public class TransitionUp implements Transition
                     arguments.add("-jar");
                     arguments.add(canonicalImagePath.toString());
                     arguments.addAll(interpolateAndSplit(service.getArguments(), serviceEnvironment));
-
-                    // TODO Use fork library on linux
                 }
                 else
                 {

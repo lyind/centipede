@@ -20,8 +20,10 @@ package net.talpidae.centipede.service;
 import com.google.inject.AbstractModule;
 import com.google.inject.binder.LinkedBindingBuilder;
 import com.google.inject.multibindings.Multibinder;
+
 import net.talpidae.centipede.service.calls.CallHandler;
 import net.talpidae.centipede.service.calls.Dependencies;
+import net.talpidae.centipede.service.calls.MetricStats;
 import net.talpidae.centipede.service.calls.Security;
 import net.talpidae.centipede.service.calls.Services;
 
@@ -38,6 +40,7 @@ public class ServiceModule extends AbstractModule
         bindCall().to(Security.class);
         bindCall().to(Services.class);
         bindCall().to(Dependencies.class);
+        bindCall().to(MetricStats.class);
 
         bind(ApiRunnableFactory.class);
     }

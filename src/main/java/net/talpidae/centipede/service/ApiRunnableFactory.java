@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.talpidae.base.util.auth.AuthenticationSecurityContext;
 import net.talpidae.base.util.queue.Enqueueable;
-import net.talpidae.centipede.bean.service.Api;
+import net.talpidae.centipede.bean.Api;
 import net.talpidae.centipede.service.calls.CallException;
 import net.talpidae.centipede.service.calls.CallHandler;
 import net.talpidae.centipede.service.calls.Security;

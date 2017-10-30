@@ -29,7 +29,7 @@ app.require([
             // Helper class for virtual scroll DOM list
             // Binds values of arrays emitted by the Observable source to copies of templateNode.
             // Use ArrayAdapter.added().subscribe() to render/recycle your items.
-            function ArrayAdapter(document, templateNode, source)
+            function ArrayAdapter(document, templateNode, source, id)
             {
                 // we inherit from Subscriber
                 Rx.Subscriber.call(this, this);
@@ -40,6 +40,7 @@ app.require([
                 this.container = templateNode.parentNode;
                 this.previousValue = [];
                 this.subscription = undefined;
+                this.id = id;
 
                 this.itemAddSubject = new Rx.Subject();
                 this.addedObservable = this.itemAddSubject.asObservable().share();
@@ -65,7 +66,7 @@ app.require([
                             value: this.removedObservable
                                 .filter(function (removed)
                                 {
-                                    return removed.value === value;
+                                    return id(removed.value) === id(value);
                                 })
                         });
                     }
@@ -87,7 +88,7 @@ app.require([
                 app.show(this.template);
                 this.documentFragment.appendChild(this.template);
 
-                this.subscription = source.subscribe(this);
+                this.subscription = source.subscribeOn(Rx.Scheduler.asap).subscribe(this);
             }
 
             ArrayAdapter.prototype = Object.create(Rx.Subscriber.prototype);
@@ -112,7 +113,7 @@ app.require([
                 var i = 0;
 
                 // first skip all items that we rendered before and that look the same
-                for (; i < Math.min(value.length, this.previousValue.length) && this.previousValue === value; ++i)
+                for (; i < Math.min(value.length, this.previousValue.length) && this.id(this.previousValue[i]) === this.id(value[i]); ++i)
                 {
                     // just don't touch these
                 }
@@ -166,10 +167,15 @@ app.require([
             };
 
             // Create a new ArrayAdapter using the specified arguments
+            // source is the source observable which must emit arrays
+            // id is the function used to retrieve a unique id per element
             Object.defineProperty(app, "arrayAdapter", {
-                value: function (templateNode, source)
+                value: function (templateNode, source, id)
                 {
-                    return new ArrayAdapter(window.document, templateNode, source);
+                    // use a default id function in case none was provided
+                    var idFunction = id || function(item) { return item; };
+
+                    return new ArrayAdapter(window.document, templateNode, source, idFunction);
                 }
             });
 

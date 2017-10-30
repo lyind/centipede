@@ -28,7 +28,7 @@ public class Configuration
 {
     private static final long DEFAULT_KEEP_METRICS_MINUTES = TimeUnit.DAYS.toMinutes(3);
 
-    private static final long DEFAULT_MAINTENANCE_INTERVAL_MINUTES = 15L;
+    private static final long DEFAULT_MAINTENANCE_INTERVAL_MINUTES = 6L;
 
     @Getter
     private final Map<String, String> environment;
@@ -38,7 +38,7 @@ public class Configuration
 
     @Getter
     private final Long maintenanceIntervalMinutes;
-    
+
     @Getter
     private final Long keepMetricsMinutes;
 

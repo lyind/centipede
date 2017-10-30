@@ -27,6 +27,7 @@
             <button data-id="createService" class="btn btn-primary">Create</button>
             <button data-id="exportServices" class="btn btn-primary">Export</button>
             <button data-id="importServices" class="btn btn-primary">Import</button>
+            <button data-id="showMetrics" class="btn btn-primary">Metrics</button>
             <button data-id="showDependencies" class="btn btn-primary">Dependencies</button>
         </div>
     </h2>
@@ -77,7 +78,9 @@
                             })
                             .flatMap(function ()
                             {
-                                return app.broker(app.subject.SERVICES).takeUntil(app.navigate());
+                                return app.broker(app.subject.SERVICES)
+                                    .subscribeOn(Rx.Scheduler.asap)
+                                    .takeUntil(app.navigate());
                             });
 
                         var adapter = app.arrayAdapter(that.serviceTemplate, services);
@@ -305,6 +308,12 @@
                     return {services: services};
                 })
                 .subscribe(app.ws);
+
+            app.eachClickUntilNavigate(that.showMetrics)
+                .subscribe(function ()
+                {
+                    app.navigate("metric-stats.html");
+                });
 
             app.eachClickUntilNavigate(that.showDependencies)
                 .subscribe(function ()

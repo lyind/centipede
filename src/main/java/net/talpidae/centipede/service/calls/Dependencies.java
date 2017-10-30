@@ -17,7 +17,7 @@
 
 package net.talpidae.centipede.service.calls;
 
-import net.talpidae.centipede.bean.service.Api;
+import net.talpidae.centipede.bean.Api;
 import net.talpidae.centipede.database.CentipedeRepository;
 
 import javax.inject.Inject;

@@ -17,8 +17,11 @@
 
 package net.talpidae.centipede.task.maintenance;
 
+import com.google.common.eventbus.EventBus;
+
 import net.talpidae.centipede.bean.configuration.Configuration;
 import net.talpidae.centipede.database.CentipedeRepository;
+import net.talpidae.centipede.event.NewMetricStats;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -29,6 +32,8 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
+import static com.google.common.base.Objects.firstNonNull;
+
 
 /**
  * Perform certain maintenance operation to keep our database healthy.
@@ -36,22 +41,38 @@ import lombok.val;
 @Slf4j
 public class MaintenanceTask implements Runnable
 {
+    /**
+     * How close to approach "now" when accumulating (we may drop late metrics if we are to close).
+     */
+    private static final long ACCUMULATION_SAFETY_MARGIN_MILLIES = TimeUnit.SECONDS.toMillis(10);
+
     private final CentipedeRepository centipedeRepository;
 
     private final Configuration config;
 
+    private final EventBus eventBus;
+
 
     @Inject
-    public MaintenanceTask(CentipedeRepository centipedeRepository, Configuration config)
+    public MaintenanceTask(CentipedeRepository centipedeRepository, Configuration config, EventBus eventBus)
     {
         this.centipedeRepository = centipedeRepository;
         this.config = config;
+        this.eventBus = eventBus;
     }
 
-
+    /**
+     * Metrics accumulation approach:
+     * <p>
+     * 1. Get path prefixes in range
+     * 2. Accumulate by prefix
+     * 3. Persist
+     */
     @Override
     public void run()
     {
+        accumulateMetrics();
+
         // purge old metrics
         val newEpoch = System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(config.getKeepMetricsMinutes());
         log.debug("removing all metric before: {}", DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(newEpoch)));
@@ -75,5 +96,18 @@ public class MaintenanceTask implements Runnable
         {
             log.error("failed to delete orphaned paths", t);
         }
+    }
+
+
+    private void accumulateMetrics()
+    {
+        // NOTE: we do NOT run this inside a single transaction because we know our records are immutable
+        //       and we want to avoid long running transactions
+        final long begin = firstNonNull(centipedeRepository.findMaxMetricStatEnd(), 0L);
+        val end = System.currentTimeMillis() - ACCUMULATION_SAFETY_MARGIN_MILLIES;
+
+        centipedeRepository.accumulateMetricStatsByRange(begin, end);
+
+        eventBus.post(new NewMetricStats());
     }
 }

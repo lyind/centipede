@@ -29,6 +29,7 @@ function()
     {
         const SERVICES = "SERVICES";
         const DEPENDENCIES = "DEPENDENCIES";
+        const METRIC_STATS = "METRIC_STATS";
         const TOKEN = "TOKEN";
         const CREDENTIALS = "CREDENTIALS";
         const ERROR = "ERROR";
@@ -72,6 +73,10 @@ function()
                 {
                     parts.push([DEPENDENCIES, message.dependencies]);
                 }
+                if (message.metricStats != null)
+                {
+                    parts.push([METRIC_STATS, message.metricStats]);
+                }
                 if (message.token != null)
                 {
                     parts.push([TOKEN, message.token]);
@@ -96,6 +101,7 @@ function()
         // publish constant subject IDs
         Object.defineProperty(app.subject, SERVICES, { value: SERVICES });
         Object.defineProperty(app.subject, DEPENDENCIES, { value: DEPENDENCIES });
+        Object.defineProperty(app.subject, METRIC_STATS, { value: METRIC_STATS });
         Object.defineProperty(app.subject, TOKEN, { value: TOKEN });
         Object.defineProperty(app.subject, CREDENTIALS, { value: CREDENTIALS });
         Object.defineProperty(app.subject, ERROR, { value: ERROR });

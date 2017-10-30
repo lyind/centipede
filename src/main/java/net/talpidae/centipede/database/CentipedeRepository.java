@@ -18,7 +18,8 @@
 package net.talpidae.centipede.database;
 
 import net.talpidae.base.util.performance.Metric;
-import net.talpidae.centipede.bean.service.Dependency;
+import net.talpidae.centipede.bean.dependency.Dependency;
+import net.talpidae.centipede.bean.metric.MetricStat;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.database.dao.DependencyDao;
 import net.talpidae.centipede.database.dao.MetricDao;
@@ -122,5 +123,32 @@ public interface CentipedeRepository
     default int deleteOrphanedPaths()
     {
         return metricDao().deleteOrphanedPaths();
+    }
+
+
+    default Long findMaxMetricStatEnd()
+    {
+        return metricDao().findMaxMetricStatEnd();
+    }
+
+
+    @Transaction
+    default void accumulateMetricStatsByRange(long begin, long end)
+    {
+        val metricDao = metricDao();
+
+        val prefixes = metricDao.findPathPrefixesByRange(begin, end);
+        metricDao.accumulateMetricStatsByPrefixesAndRange(prefixes, begin, end);
+    }
+
+
+    default List<MetricStat> findMetricStatsByPathPrefixAndRange(String pathPrefix, long begin, long end)
+    {
+        return metricDao().findMetricStatsByPathPrefixAndRange(pathPrefix, begin, end);
+    }
+
+    default List<MetricStat> findMostRecentMetricStatsByPathPrefix(String pathPrefix)
+    {
+        return metricDao().findMostRecentMetricStatsByPathPrefix(pathPrefix);
     }
 }
