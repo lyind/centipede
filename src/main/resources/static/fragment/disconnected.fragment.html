@@ -17,6 +17,11 @@
     {
         Rx.Observable.empty()
             .merge(
+                // disconnects -> true (show)
+                app.broker(app.subject.WEBSOCKET_ERROR).map(function ()
+                {
+                    return true;
+                }),
                 // connect - false (hide)
                 app.broker(app.subject.WEBSOCKET_OPEN).map(function ()
                 {
@@ -26,11 +31,6 @@
                 app.eachClick(that.mask).map(function ()
                 {
                     return false;
-                }),
-                // disconnects -> true (show)
-                app.broker(app.subject.WEBSOCKET_ERROR).map(function ()
-                {
-                    return true;
                 })
             )
             .distinctUntilChanged()
