@@ -45,7 +45,10 @@ public interface MetricDao
     int deleteMetricsBefore(@Bind("newEpochMillies") long newEpochMillies);
 
     @SqlUpdate("DELETE FROM metric_path WHERE NOT EXISTS (SELECT 1 FROM metric WHERE id = pathId)")
-    int deleteOrphanedPaths();
+    void deleteOrphanedPaths();
+
+    @SqlUpdate("DELETE FROM metric_stat WHERE \"begin\" < :newEpochMillies AND \"end\" <= :newEpochMillies")
+    void deleteMetricStatsBefore(@Bind("newEpochMillies") long newEpochMillies);
 
     @RegisterConstructorMapper(Metric.class)
     @SqlQuery("SELECT mp1.path, m1.ts, m1.value\n"
@@ -64,15 +67,21 @@ public interface MetricDao
             + "	-- take whole path\n"
             + "	mp1.path\n"
             + "  ) AS pathPrefix\n"
-            + "FROM metric m1\n"
-            + "INNER JOIN metric_path mp1 ON (mp1.id = m1.pathId)\n"
-            + "WHERE m1.ts >= (:begin * 1000000) AND m1.ts < (:end * 1000000)\n"
+            + "FROM metric_path mp1\n"
             + "GROUP BY pathPrefix")
-    List<String> findPathPrefixesByRange(@Bind("begin") long beginTimeMillies, @Bind("end") long endTimeMillies);
+    List<String> findPathPrefixes();
 
 
     @SqlQuery("SELECT MAX(ms1.end) FROM metric_stat ms1")
     Long findMaxMetricStatEnd();
+
+
+    @SqlQuery("SELECT (MIN(ts) / 1000000) AS ts FROM metric")
+    Long findMinMetricTs();
+
+
+    @SqlQuery("SELECT (MAX(ts) / 1000000) AS ts FROM metric")
+    Long findMaxMetricTs();
 
 
     @SqlBatch("WITH\n"
@@ -104,26 +113,26 @@ public interface MetricDao
             + "        WHERE path LIKE '%/nonHeapCommitted'\n"
             + "    ),\n"
             + "    metric_period_status_count AS (\n"
-            + "        SELECT COUNT(1) AS total\n"
+            + "        SELECT nullif(COUNT(1), 0) AS total\n"
             + "        FROM metric_period_status\n"
             + "    ),\n"
             + "    metric_period_status_count_2xx AS (\n"
-            + "        SELECT COUNT(1) AS status2xxCount\n"
+            + "        SELECT CAST(COUNT(1) AS REAL) AS status2xxCount\n"
             + "        FROM metric_period_status\n"
             + "        WHERE status >= 200 AND status < 300\n"
             + "    ),\n"
             + "    metric_period_status_count_3xx AS (\n"
-            + "        SELECT COUNT(1) AS status3xxCount\n"
+            + "        SELECT CAST(COUNT(1) AS REAL) AS status3xxCount\n"
             + "        FROM metric_period_status\n"
             + "        WHERE status >= 300 AND status < 400\n"
             + "    ),\n"
             + "    metric_period_status_count_4xx AS (\n"
-            + "        SELECT COUNT(1) AS status4xxCount\n"
+            + "        SELECT CAST(COUNT(1) AS REAL) AS status4xxCount\n"
             + "        FROM metric_period_status\n"
             + "        WHERE status >= 400 AND status < 500\n"
             + "    ),\n"
             + "    metric_period_status_count_5xx AS (\n"
-            + "        SELECT COUNT(1) AS status5xxCount\n"
+            + "        SELECT CAST(COUNT(1) AS REAL) AS status5xxCount\n"
             + "        FROM metric_period_status\n"
             + "        WHERE status >= 500 AND status < 600\n"
             + "    )\n"
@@ -150,10 +159,10 @@ public interface MetricDao
             + "    ifnull((SELECT MIN(duration) FROM metric_period_duration), 0.0) AS minTime,\n"
             + "    ifnull((SELECT round(AVG(duration), 3) FROM metric_period_duration), 0.0) AS avgTime,\n"
             + "    ifnull((SELECT MAX(duration) FROM metric_period_duration), 0.0) AS maxTime,\n"
-            + "    ifnull((((SELECT status2xxCount FROM metric_period_status_count_2xx) / (SELECT total FROM metric_period_status_count)) * 100.0), 0.0) AS status2xx,\n"
-            + "    ifnull((((SELECT status3xxCount FROM metric_period_status_count_3xx) / (SELECT total FROM metric_period_status_count)) * 100.0), 0.0) AS status3xx,\n"
-            + "    ifnull((((SELECT status4xxCount FROM metric_period_status_count_4xx) / (SELECT total FROM metric_period_status_count)) * 100.0), 0.0) AS status4xx,\n"
-            + "    ifnull((((SELECT status5xxCount FROM metric_period_status_count_5xx) / (SELECT total FROM metric_period_status_count)) * 100.0), 0.0) AS status5xx,\n"
+            + "    ifnull(round(((SELECT status2xxCount FROM metric_period_status_count_2xx) / (SELECT total FROM metric_period_status_count)), 4), 1.0) AS status2xx,\n"
+            + "    ifnull(round(((SELECT status3xxCount FROM metric_period_status_count_3xx) / (SELECT total FROM metric_period_status_count)), 4), 0.0) AS status3xx,\n"
+            + "    ifnull(round(((SELECT status4xxCount FROM metric_period_status_count_4xx) / (SELECT total FROM metric_period_status_count)), 4), 0.0) AS status4xx,\n"
+            + "    ifnull(round(((SELECT status5xxCount FROM metric_period_status_count_5xx) / (SELECT total FROM metric_period_status_count)), 4), 0.0) AS status5xx,\n"
             + "    ifnull((SELECT maxHeap FROM metric_period_max_heap), 0.0) AS maxHeap,\n"
             + "    ifnull((SELECT maxNonHeap FROM metric_period_max_non_heap), 0.0) AS maxNonHeap")
     void accumulateMetricStatsByPrefixesAndRange(@Bind("pathPrefix") Iterable<String> pathPrefix, @Bind("begin") long beginTimeMillies, @Bind("end") long endTimeMillies);
@@ -177,8 +186,8 @@ public interface MetricDao
             + "FROM metric_stat ms1\n"
             + "WHERE (:pathPrefix IS NULL OR ms1.pathPrefix = :pathPrefix)\n"
             + "  AND (ms1.begin >= :begin AND ms1.end <= :end)\n"
-            + "ORDER BY ms2.pathPrefix ASC")
-    List<MetricStat> findMetricStatsByPathPrefixAndRange(@Bind("pathPrefix") String pathPrefix, long begin, long end);
+            + "ORDER BY ms1.pathPrefix ASC")
+    List<MetricStat> findMetricStatsByPathPrefixAndRange(@Bind("pathPrefix") String pathPrefix, @Bind("begin") long beginTimeMillies, @Bind("end") long endTimeMillies);
 
 
     @RegisterConstructorMapper(MetricStat.class)

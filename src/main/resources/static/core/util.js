@@ -124,6 +124,13 @@ app.require([],
                 }
             });
 
+            Object.defineProperty(app, "isHidden", {
+                value: function (element)
+                {
+                    return element.classList.contains("d-hide");
+                }
+            });
+
             Object.defineProperty(app, "setReadonly", {
                 value: function (element, isReadonly)
                 {

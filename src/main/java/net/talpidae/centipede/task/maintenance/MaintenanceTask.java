@@ -32,8 +32,6 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
-import static com.google.common.base.Objects.firstNonNull;
-
 
 /**
  * Perform certain maintenance operation to keep our database healthy.
@@ -73,41 +71,55 @@ public class MaintenanceTask implements Runnable
     {
         accumulateMetrics();
 
-        // purge old metrics
-        val newEpoch = System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(config.getKeepMetricsMinutes());
-        log.debug("removing all metric before: {}", DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(newEpoch)));
-        try
-        {
-            val deletedMetrics = centipedeRepository.deleteMetricsBefore(newEpoch);
-            log.debug("removed {} metrics", deletedMetrics);
-        }
-        catch (Throwable t)
-        {
-            log.error("failed to delete metrics", t);
-        }
-
-        // delete orphaned paths
-        try
-        {
-            val deletedPaths = centipedeRepository.deleteOrphanedPaths();
-            log.debug("removed {} orphaned paths", deletedPaths);
-        }
-        catch (Throwable t)
-        {
-            log.error("failed to delete orphaned paths", t);
-        }
+        truncateMetrics();
     }
 
 
     private void accumulateMetrics()
     {
-        // NOTE: we do NOT run this inside a single transaction because we know our records are immutable
-        //       and we want to avoid long running transactions
-        final long begin = firstNonNull(centipedeRepository.findMaxMetricStatEnd(), 0L);
-        val end = System.currentTimeMillis() - ACCUMULATION_SAFETY_MARGIN_MILLIES;
+        val interval = config.getMaintenanceIntervalMinutes();
 
-        centipedeRepository.accumulateMetricStatsByRange(begin, end);
+        val limit = System.currentTimeMillis() - ACCUMULATION_SAFETY_MARGIN_MILLIES;
+        try
+        {
+            int totalRecords = 0;
+            int createdRecords = 0;
+            do
+            {
+                createdRecords = centipedeRepository.accumulateMetricStatsUpTo(TimeUnit.MINUTES.toMillis(interval), limit);
+                totalRecords += Math.max(0, createdRecords);
+            }
+            while (createdRecords > 0);
 
-        eventBus.post(new NewMetricStats());
+            if (totalRecords > 0)
+            {
+                log.debug("accumulated metrics into {} records of {}min up to: {}", totalRecords, interval, DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(limit)));
+
+                eventBus.post(new NewMetricStats());
+            }
+        }
+        catch (Throwable t)
+        {
+            log.error("failed to accumulate metrics", t);
+        }
+    }
+
+
+    private void truncateMetrics()
+    {
+        // purge old metrics
+        val newEpoch = System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(config.getKeepMetricsMinutes());
+        try
+        {
+            val deletedMetrics = centipedeRepository.deleteMetricsBefore(newEpoch);
+            if (deletedMetrics > 0)
+            {
+                log.debug("removed {} metric records before: {}", deletedMetrics, DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(newEpoch)));
+            }
+        }
+        catch (Throwable t)
+        {
+            log.error("failed to delete metrics", t);
+        }
     }
 }

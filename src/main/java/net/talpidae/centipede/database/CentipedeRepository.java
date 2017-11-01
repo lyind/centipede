@@ -114,31 +114,45 @@ public interface CentipedeRepository
     }
 
 
+    @Transaction
     default int deleteMetricsBefore(long newEpochMillies)
     {
-        return metricDao().deleteMetricsBefore(newEpochMillies);
-    }
+        val metricDao = metricDao();
 
+        // first, remove stats
+        metricDao.deleteMetricStatsBefore(newEpochMillies);
 
-    default int deleteOrphanedPaths()
-    {
-        return metricDao().deleteOrphanedPaths();
-    }
+        // second, remove raw metrics and connected paths
+        val removedMetricCount = metricDao.deleteMetricsBefore(newEpochMillies);
+        metricDao.deleteOrphanedPaths();
 
-
-    default Long findMaxMetricStatEnd()
-    {
-        return metricDao().findMaxMetricStatEnd();
+        return removedMetricCount;
     }
 
 
     @Transaction
-    default void accumulateMetricStatsByRange(long begin, long end)
+    default int accumulateMetricStatsUpTo(long interval, long limit)
     {
         val metricDao = metricDao();
 
-        val prefixes = metricDao.findPathPrefixesByRange(begin, end);
-        metricDao.accumulateMetricStatsByPrefixesAndRange(prefixes, begin, end);
+        Long begin = metricDao.findMaxMetricStatEnd();
+        if (begin == null)
+        {
+            begin = metricDao.findMinMetricTs();
+        }
+
+        if (begin != null && begin < limit)
+        {
+            val end = begin + interval;
+            if (end < limit)
+            {
+                val prefixes = metricDao.findPathPrefixes();
+                metricDao.accumulateMetricStatsByPrefixesAndRange(prefixes, begin, end);
+                return prefixes.size();
+            }
+        }
+
+        return 0;
     }
 
 
