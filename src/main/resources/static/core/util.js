@@ -113,6 +113,7 @@ app.require([],
             Object.defineProperty(app, "hide", {
                 value: function (element)
                 {
+                    element.setAttribute("hidden", "");
                     element.classList.add("d-hide");
                 }
             });
@@ -120,6 +121,7 @@ app.require([],
             Object.defineProperty(app, "show", {
                 value: function (element)
                 {
+                    element.removeAttribute("hidden");
                     element.classList.remove("d-hide");
                 }
             });
@@ -127,7 +129,7 @@ app.require([],
             Object.defineProperty(app, "isHidden", {
                 value: function (element)
                 {
-                    return element.classList.contains("d-hide");
+                    return !element || element.hasAttribute("hidden") || element.classList.contains("d-hide");
                 }
             });
 
@@ -167,6 +169,14 @@ app.require([],
                         app.show(element);
                     else
                         app.hide(element);
+                }
+            });
+
+            // Test if a value is not "undefined" and not "null"
+            Object.defineProperty(app, "isPresent", {
+                value: function (value)
+                {
+                    return !!value;
                 }
             });
 
