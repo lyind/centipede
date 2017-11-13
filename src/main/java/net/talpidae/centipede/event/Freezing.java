@@ -4,7 +4,7 @@ import lombok.Value;
 
 
 @Value
-public class Frozen
+public class Freezing
 {
     private final boolean isFrozen;
 }

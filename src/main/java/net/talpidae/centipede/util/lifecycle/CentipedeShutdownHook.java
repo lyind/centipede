@@ -6,7 +6,7 @@ import net.talpidae.base.event.Shutdown;
 import net.talpidae.base.util.lifecycle.DefaultShutdownHook;
 import net.talpidae.base.util.lifecycle.ShutdownHook;
 import net.talpidae.centipede.database.CentipedeRepository;
-import net.talpidae.centipede.event.Frozen;
+import net.talpidae.centipede.event.Freezing;
 import net.talpidae.centipede.service.transition.TransitionDown;
 import net.talpidae.centipede.task.state.StateMachine;
 import net.talpidae.centipede.util.service.ServiceUtil;
@@ -47,7 +47,7 @@ public class CentipedeShutdownHook extends ShutdownHook
                     if (i == TransitionDown.TRANSITION_COUNT_NOTIFY_PHASE)
                     {
                         // we need to do this to prevent scheduler task from launching services again
-                        eventBus.post(new Frozen(true));
+                        eventBus.post(new Freezing(true));
                     }
                     else if (i == TransitionDown.TRANSITION_COUNT_KILLING_PHASE)
                     {

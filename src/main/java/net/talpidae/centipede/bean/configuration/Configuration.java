@@ -41,17 +41,22 @@ public class Configuration
 
     @Getter
     private final Long keepMetricsMinutes;
+    
+    @Getter
+    private final Boolean isFrozen;
 
 
     @JsonCreator
     public Configuration(@JsonProperty("environment") @ColumnName("environment") Map<String, String> environment,
                          @JsonProperty("initialServices") @ColumnName("initialServices") List<Service> initialServices,
                          @JsonProperty("maintenanceIntervalMinutes") @ColumnName("maintenanceIntervalMinutes") Long maintenanceIntervalMinutes,
-                         @JsonProperty("keepMetricsMinutes") @ColumnName("keepMetricsMinutes") Long keepMetricsMinutes)
+                         @JsonProperty("keepMetricsMinutes") @ColumnName("keepMetricsMinutes") Long keepMetricsMinutes,
+                         @JsonProperty("isFrozen") @ColumnName("isFrozen") Boolean isFrozen)
     {
         this.environment = environment != null ? environment : Collections.emptyMap();
         this.initialServices = initialServices != null ? initialServices : Collections.emptyList();
         this.maintenanceIntervalMinutes = maintenanceIntervalMinutes != null ? Math.max(1, maintenanceIntervalMinutes) : DEFAULT_MAINTENANCE_INTERVAL_MINUTES;
         this.keepMetricsMinutes = keepMetricsMinutes != null ? Math.max(keepMetricsMinutes, this.maintenanceIntervalMinutes) : DEFAULT_KEEP_METRICS_MINUTES;
+        this.isFrozen = isFrozen != null ? isFrozen : false;
     }
 }

@@ -5,9 +5,11 @@ import com.google.common.eventbus.Subscribe;
 
 import net.talpidae.base.event.Shutdown;
 import net.talpidae.centipede.bean.Api;
+import net.talpidae.centipede.bean.frozen.FrozenState;
 import net.talpidae.centipede.bean.metric.MetricStatView;
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.DependenciesModified;
+import net.talpidae.centipede.event.Freezing;
 import net.talpidae.centipede.event.NewMetricStats;
 import net.talpidae.centipede.event.ServicesModified;
 
@@ -61,6 +63,15 @@ public class EventForwarder
                 .metricStats(MetricStatView.builder()
                         .metricStats(centipedeRepository.findMostRecentMetricStatsByPathPrefix(null))
                         .build())
+                .build());
+    }
+
+
+    @Subscribe
+    public void onFreezing(Freezing freezing)
+    {
+        apiBroadcastQueue.add(Api.builder()
+                .frozen(freezing.isFrozen() ? FrozenState.TRUE : FrozenState.FALSE)
                 .build());
     }
 

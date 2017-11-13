@@ -34,6 +34,7 @@ function()
         const CREDENTIALS = "CREDENTIALS";
         const ERROR = "ERROR";
         const OVERFLOW = "OVERFLOW";
+        const FROZEN = "FROZEN";
 
 
         var splitter = function(message)
@@ -93,6 +94,10 @@ function()
                 {
                     parts.push([OVERFLOW, true, true]);
                 }
+                if (message.frozen != null)
+                {
+                    parts.push([FROZEN, message.frozen]);
+                }
             }
 
             return parts;
@@ -106,6 +111,7 @@ function()
         Object.defineProperty(app.subject, CREDENTIALS, { value: CREDENTIALS });
         Object.defineProperty(app.subject, ERROR, { value: ERROR });
         Object.defineProperty(app.subject, OVERFLOW, { value: OVERFLOW });
+        Object.defineProperty(app.subject, FROZEN, { value: FROZEN });
 
         // publish splitter
         app.splitters.push(splitter);

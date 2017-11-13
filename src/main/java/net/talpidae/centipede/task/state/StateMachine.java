@@ -23,7 +23,7 @@ import com.google.common.eventbus.Subscribe;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
-import net.talpidae.centipede.event.Frozen;
+import net.talpidae.centipede.event.Freezing;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.service.transition.Transition;
 import net.talpidae.centipede.service.transition.TransitionDown;
@@ -240,7 +240,7 @@ public class StateMachine implements Runnable
 
 
     @Subscribe
-    public void onStateFreeze(Frozen frozen)
+    public void onStateFreeze(Freezing frozen)
     {
         this.isFrozen.compareAndSet(!frozen.isFrozen(), frozen.isFrozen());
     }

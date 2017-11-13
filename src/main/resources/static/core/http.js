@@ -18,23 +18,55 @@
 
 // UI helper
 app.require([
-    "lib/Rx.js"
-],
-function()
-{
-    console.log("[http] init");
-
-    (function(app, document, Rx)
+        "lib/Rx.js"
+    ],
+    function ()
     {
-        var GET = function(url, responseType, headers)
+        console.log("[http] init");
+
+        (function (app, document, Rx)
         {
-            return Rx.Observable.ajax({ method: 'GET', url: url, responseType: responseType, headers: headers })
-                .map(function(ajaxResponse) { return ajaxResponse.response; });
-        };
+            var GET = function (url, responseType, headers)
+            {
+                return Rx.Observable.ajax({
+                    method: 'GET',
+                    url: url,
+                    responseType: responseType,
+                    async: true,
+                    headers: headers
+                })
+                    .map(function (ajaxResponse)
+                    {
+                        return ajaxResponse.response;
+                    });
+            };
 
-        // publish methods
-        Object.defineProperty(app, "GET", { value: GET });
+            var POST = function (url, responseType, headers, body, contentType)
+            {
+                var mergedHeaders = headers || {};
+                if (contentType)
+                {
+                    mergedHeaders["Content-Type"] = contentType;
+                }
 
-    })(window.app, document, window.Rx);
+                return Rx.Observable.ajax({
+                    method: 'POST',
+                    url: url,
+                    body: body,
+                    responseType: responseType,
+                    async: true,
+                    headers: mergedHeaders
+                })
+                    .map(function (ajaxResponse)
+                    {
+                        return ajaxResponse.response;
+                    });
+            };
 
-});
+            // publish methods
+            Object.defineProperty(app, "GET", {value: GET});
+            Object.defineProperty(app, "POST", {value: POST});
+
+        })(window.app, document, window.Rx);
+
+    });

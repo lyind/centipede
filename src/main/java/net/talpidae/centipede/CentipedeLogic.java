@@ -31,6 +31,7 @@ import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.DependenciesChanged;
 import net.talpidae.centipede.event.DependenciesModified;
+import net.talpidae.centipede.event.Freezing;
 import net.talpidae.centipede.event.NewMapping;
 import net.talpidae.centipede.event.NewMetrics;
 import net.talpidae.centipede.event.ServicesModified;
@@ -95,6 +96,11 @@ public class CentipedeLogic
         // initialize service database immediately
         scheduler.schedule(initTask);
         scheduler.schedule(maintenanceTask); // perform immediate maintenance
+
+        if (Boolean.TRUE.equals(configuration.getIsFrozen()))
+        {
+            eventBus.post(new Freezing(true));
+        }
     }
 
 

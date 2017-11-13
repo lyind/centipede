@@ -19,6 +19,7 @@ package net.talpidae.centipede.bean;
 
 import net.talpidae.base.util.auth.Credentials;
 import net.talpidae.centipede.bean.dependency.Dependency;
+import net.talpidae.centipede.bean.frozen.FrozenState;
 import net.talpidae.centipede.bean.metric.MetricStatView;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.service.wrapper.CallContext;
@@ -78,4 +79,9 @@ public class Api
      * Indicates broadcast queue overflow.
      */
     private Boolean overflow;
+
+    /**
+     * Is the state machine frozen (no services start/stop allowed)?
+     */
+    private FrozenState frozen;
 }
