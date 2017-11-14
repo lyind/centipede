@@ -28,6 +28,7 @@ import net.talpidae.base.server.ServerConfig;
 import net.talpidae.centipede.event.DependenciesChanged;
 import net.talpidae.centipede.event.NewMapping;
 import net.talpidae.centipede.event.NewMetrics;
+import net.talpidae.centipede.event.ServiceTimedOut;
 
 import java.net.InetSocketAddress;
 
@@ -70,8 +71,15 @@ public class CentipedeSyncQueen extends SyncQueen
         // update DB state
         if (isNewMapping)
         {
-            eventBus.post(new NewMapping(mapping));
+            eventBus.post(new NewMapping(state, mapping));
         }
+    }
+
+
+    @Override
+    protected void handleTimeout(InsectState timedOutState)
+    {
+        eventBus.post(new ServiceTimedOut(timedOutState));
     }
 
 

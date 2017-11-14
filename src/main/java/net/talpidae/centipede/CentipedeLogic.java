@@ -19,11 +19,13 @@ package net.talpidae.centipede;
 
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+import com.google.common.net.HostAndPort;
 import com.google.inject.Singleton;
 
 import net.talpidae.base.event.ServerShutdown;
 import net.talpidae.base.event.ServerStarted;
 import net.talpidae.base.insect.Queen;
+import net.talpidae.base.insect.state.InsectState;
 import net.talpidae.base.util.thread.GeneralScheduler;
 import net.talpidae.centipede.bean.configuration.Configuration;
 import net.talpidae.centipede.bean.service.Service;
@@ -34,11 +36,12 @@ import net.talpidae.centipede.event.DependenciesModified;
 import net.talpidae.centipede.event.Freezing;
 import net.talpidae.centipede.event.NewMapping;
 import net.talpidae.centipede.event.NewMetrics;
+import net.talpidae.centipede.event.ServiceTimedOut;
 import net.talpidae.centipede.event.ServicesModified;
-import net.talpidae.centipede.task.health.HealthCheck;
 import net.talpidae.centipede.task.init.InitTask;
 import net.talpidae.centipede.task.maintenance.MaintenanceTask;
 import net.talpidae.centipede.task.state.StateMachine;
+import net.talpidae.centipede.util.service.ServiceUtil;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -48,6 +51,9 @@ import javax.inject.Inject;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+
+import static com.google.common.base.Objects.firstNonNull;
+import static com.google.common.base.Strings.nullToEmpty;
 
 
 @Slf4j
@@ -59,8 +65,6 @@ public class CentipedeLogic
     private final EventBus eventBus;
 
     private final GeneralScheduler scheduler;
-
-    private final HealthCheck pulseCheck;
 
     private final StateMachine stateMachine;
 
@@ -75,7 +79,6 @@ public class CentipedeLogic
     public CentipedeLogic(CentipedeRepository repository,
                           EventBus eventBus,
                           GeneralScheduler scheduler,
-                          HealthCheck pulseCheck,
                           StateMachine stateMachine,
                           Queen queen,
                           Configuration configuration,
@@ -85,7 +88,6 @@ public class CentipedeLogic
         this.repository = repository;
         this.eventBus = eventBus;
         this.scheduler = scheduler;
-        this.pulseCheck = pulseCheck;
         this.stateMachine = stateMachine;
         this.queen = queen;
         this.maintenanceTask = maintenanceTask;
@@ -103,17 +105,34 @@ public class CentipedeLogic
         }
     }
 
+    /**
+     * Is the service in a stable state?
+     */
+    private static boolean isStableAndNotDown(Service service)
+    {
+        val state = service.getState();
+
+        return state != State.DOWN && state != State.CHANGING && !(state == State.UNKNOWN && ServiceUtil.hasValidPid(service));
+    }
+
+    private static boolean isSameInstance(Service service, InsectState state)
+    {
+        val socketAddress = state.getSocketAddress();
+        val servicePort = firstNonNull(service.getPort(), 0);
+
+        val knownHostAndPort = HostAndPort.fromParts(nullToEmpty(service.getHost()), servicePort >= 0 ? servicePort : 0);
+        val instanceHostAndPort = HostAndPort.fromParts(nullToEmpty(socketAddress.getHostString()), socketAddress.getPort());
+
+        return knownHostAndPort.equals(instanceHostAndPort);
+    }
 
     @Subscribe
     public void onServerStarted(ServerStarted started)
     {
-        queen.run();
-
         // set all services to state "UNKNOWN" initially
         overrideStateUnknown();
 
-        // give services already running enough time to register
-        scheduler.scheduleWithFixedDelay(pulseCheck, 4000L, 1500L, TimeUnit.MILLISECONDS);
+        queen.run();
 
         // don't try starting services while we are still waiting for externally launched services state
         scheduler.scheduleWithFixedDelay(stateMachine, 7000L, 1000L, TimeUnit.MILLISECONDS);
@@ -122,9 +141,39 @@ public class CentipedeLogic
         scheduler.scheduleWithFixedDelay(maintenanceTask, configuration.getMaintenanceIntervalMinutes(), configuration.getMaintenanceIntervalMinutes(), TimeUnit.MINUTES);
     }
 
+    /*
+     * A service timed out. Register it as Status.DOWN in the DB.
+     */
+    @Subscribe
+    public void onServiceTimedOut(ServiceTimedOut serviceTimedOut)
+    {
+        val state = serviceTimedOut.getState();
+        val name = state.getName();
+        scheduler.schedule(() ->
+        {
+            try
+            {
+                repository.findServiceByName(name)
+                        .filter(service -> isSameInstance(service, state))
+                        .filter(CentipedeLogic::isStableAndNotDown)
+                        .map(service -> Service.builder().name(name).state(State.DOWN).build())
+                        .ifPresent(service ->
+                        {
+                            repository.insertServiceState(service);
+
+                            eventBus.post(new ServicesModified(Collections.singletonList(name)));
+                        });
+            }
+            catch (Throwable t)
+            {
+                log.error("failed to register service timeout for: {}: {}", name, t.getMessage(), t);
+            }
+        });
+    }
+
 
     /**
-     * Received a mapping for a previously unknown service. Persist if not done so already.
+     * Received a mapping for a service not present or timed-out before. Update info in DB.
      */
     @Subscribe
     public void onNewMapping(NewMapping newMapping)
@@ -134,17 +183,18 @@ public class CentipedeLogic
             try
             {
                 val mapping = newMapping.getMapping();
+                val name = mapping.getName();
                 val updatedService = Service.builder()
-                        .name(mapping.getName())
+                        .name(name)
                         .retired(false)
-                        .state(State.CHANGING)
+                        .state(newMapping.getState().isOutOfService() ? State.OUT_OF_SERVICE : State.UP)
                         .route(mapping.getRoute())
                         .host(mapping.getHost())
                         .port(mapping.getPort())
                         .build();
 
                 repository.insertServiceState(updatedService);
-                eventBus.post(new ServicesModified(Collections.singletonList(mapping.getName())));
+                eventBus.post(new ServicesModified(Collections.singletonList(name)));
             }
             catch (Throwable e)
             {
@@ -152,7 +202,6 @@ public class CentipedeLogic
             }
         });
     }
-
 
     /**
      * Dependencies of a service were updated. Track changes in database.
@@ -175,7 +224,6 @@ public class CentipedeLogic
         });
     }
 
-
     /**
      * Received new metrics from a slave.
      */
@@ -195,7 +243,6 @@ public class CentipedeLogic
         });
     }
 
-
     @Subscribe
     public void onServerShutdown(ServerShutdown shutdown)
     {
@@ -208,7 +255,6 @@ public class CentipedeLogic
             // never happens
         }
     }
-
 
     private void overrideStateUnknown()
     {

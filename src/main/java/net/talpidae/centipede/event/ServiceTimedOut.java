@@ -17,7 +17,7 @@
 
 package net.talpidae.centipede.event;
 
-import java.util.List;
+import net.talpidae.base.insect.state.InsectState;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Getter
-public class ServicesModified
+public class ServiceTimedOut
 {
-    private final List<String> serviceNames;
+    private final InsectState state;
 }

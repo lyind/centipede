@@ -18,6 +18,7 @@
 package net.talpidae.centipede.event;
 
 import net.talpidae.base.insect.message.payload.Mapping;
+import net.talpidae.base.insect.state.InsectState;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -27,5 +28,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 public class NewMapping
 {
+    private final InsectState state;
+
     private final Mapping mapping;
 }
