@@ -30,6 +30,7 @@ import net.talpidae.centipede.service.transition.TransitionDown;
 import net.talpidae.centipede.service.transition.TransitionUp;
 import net.talpidae.centipede.util.service.ServiceUtil;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -150,15 +151,16 @@ public class StateMachine implements Runnable
                         break;
 
                     default:
-                        if (ServiceUtil.hasValidPid(service))
+                        if (targetState == State.DOWN)
                         {
-                            // allow to bring down service from unknown state
-                            undergoTransition(service, targetState, null, down);
+                            // continue to bring down service from unknown state
+                            undergoTransition(service, targetState, State.DOWN, down);
                         }
-                        else if (txnTargetState != null)
+                        else if (service.getTs().isBefore(OffsetDateTime.now().minus(Duration.ofMillis(AFTER_TIMEOUT_COOLDOWN_DELAY_MS / 2))))
                         {
-                            // remove pinned target state (now changes are accepted, again)
-                            transactionTargetState.remove(service.getName());
+                            // service timed out
+                            // override pinned target state to safely bring the service into State.DOWN
+                            transactionTargetState.put(service.getName(), State.DOWN);
                         }
 
                         break;

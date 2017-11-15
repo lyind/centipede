@@ -44,8 +44,11 @@ import net.talpidae.centipede.task.state.StateMachine;
 import net.talpidae.centipede.util.service.ServiceUtil;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
@@ -53,6 +56,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 import static com.google.common.base.Objects.firstNonNull;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Strings.nullToEmpty;
 
 
@@ -130,9 +134,7 @@ public class CentipedeLogic
     public void onServerStarted(ServerStarted started)
     {
         // set all services to state "UNKNOWN" initially
-        overrideStateUnknown();
-
-        queen.run();
+        initializeQueen();
 
         // don't try starting services while we are still waiting for externally launched services state
         scheduler.scheduleWithFixedDelay(stateMachine, 7000L, 1000L, TimeUnit.MILLISECONDS);
@@ -156,7 +158,7 @@ public class CentipedeLogic
                 repository.findServiceByName(name)
                         .filter(service -> isSameInstance(service, state))
                         .filter(CentipedeLogic::isStableAndNotDown)
-                        .map(service -> Service.builder().name(name).state(State.DOWN).build())
+                        .map(service -> Service.builder().name(name).state(State.UNKNOWN).build())
                         .ifPresent(service ->
                         {
                             repository.insertServiceState(service);
@@ -256,12 +258,55 @@ public class CentipedeLogic
         }
     }
 
-    private void overrideStateUnknown()
+    private void initializeQueen()
     {
         scheduler.schedule(() ->
         {
             try
             {
+                val nowNanos = System.nanoTime();
+
+                // restore queen state
+                final Stream<Map.Entry<String, InsectState>> lastInsectStates = repository.findAll().stream()
+                        .filter(service -> service.getState() != State.DOWN
+                                && !isNullOrEmpty(service.getHost())
+                                && service.getPort() != null && service.getPort() > 0 && service.getPort() < 65535)
+                        .map(service ->
+                        {
+                            val state = InsectState.builder()
+                                    .socketAddress(new InetSocketAddress(service.getHost(), service.getPort()))
+                                    .name(service.getName())
+                                    .isOutOfService(service.getState() == State.OUT_OF_SERVICE)
+                                    .newEpoch(nowNanos, nowNanos)
+                                    .build();
+
+                            return new Map.Entry<String, InsectState>()
+                            {
+
+                                @Override
+                                public String getKey()
+                                {
+                                    return service.getRoute();
+                                }
+
+                                @Override
+                                public InsectState getValue()
+                                {
+                                    return state;
+                                }
+
+                                @Override
+                                public InsectState setValue(InsectState value)
+                                {
+                                    throw new UnsupportedOperationException("setValue() is not supported");
+                                }
+                            };
+                        });
+
+                // initialize queen with the previous state for all non-DOWN services
+                queen.initializeInsectState(lastInsectStates);
+
+                // set all services state to State.UNKNOWN (to force update by queen or kill)
                 val names = repository.findAllNames();
                 for (val name : names)
                 {
@@ -273,11 +318,11 @@ public class CentipedeLogic
                     repository.insertServiceState(updatedService);
                 }
 
-                eventBus.post(new ServicesModified(names));
+                queen.run();
             }
             catch (Throwable e)
             {
-                log.error("overrideStateUnknown(): scheduled task failed: {}", e.getMessage(), e);
+                log.error("initializeQueen(): scheduled task failed: {}", e.getMessage(), e);
             }
         });
     }
