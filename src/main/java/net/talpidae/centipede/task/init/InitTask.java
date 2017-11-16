@@ -19,6 +19,7 @@ package net.talpidae.centipede.task.init;
 
 import net.talpidae.centipede.bean.configuration.Configuration;
 import net.talpidae.centipede.bean.service.Service;
+import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
 
 import java.util.List;
@@ -70,6 +71,7 @@ public class InitTask implements Runnable
             try
             {
                 centipedeRepository.insertServiceConfiguration(sanitizedService);
+                centipedeRepository.insertServiceState(Service.builder().name(sanitizedService.getName()).state(State.DOWN).build());
                 log.debug("added service: {}", sanitizedService.getName());
             }
             catch (Exception e)
