@@ -21,6 +21,7 @@ import com.google.common.eventbus.EventBus;
 
 import net.talpidae.base.insect.Queen;
 import net.talpidae.centipede.bean.service.Service;
+import net.talpidae.centipede.bean.service.State;
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.ServicesModified;
 import net.talpidae.centipede.util.process.ProcessUtil;
@@ -126,6 +127,7 @@ public class TransitionDown implements Transition
     {
         val updatedService = Service.builder()
                 .name(service.getName())
+                .state(State.DOWN)
                 .pid(-1L)
                 .port(-1)
                 .build();
