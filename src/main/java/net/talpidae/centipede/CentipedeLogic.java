@@ -158,9 +158,13 @@ public class CentipedeLogic
                 repository.findServiceByName(name)
                         .filter(service -> isSameInstance(service, state))
                         .filter(CentipedeLogic::isStableAndNotDown)
-                        .map(service -> Service.builder().name(name).state(State.UNKNOWN).build())
+                        .map(service -> Service.builder()
+                                .name(name)
+                                .state(service.getState() == State.DOWN ? State.DOWN : State.UNKNOWN)
+                                .build())
                         .ifPresent(service ->
                         {
+                            log.info("service timed out: {}", name);
                             repository.insertServiceState(service);
 
                             eventBus.post(new ServicesModified(Collections.singletonList(name)));
@@ -307,16 +311,10 @@ public class CentipedeLogic
                 queen.initializeInsectState(lastInsectStates);
 
                 // set all services state to State.UNKNOWN (to force update by queen or kill)
-                val names = repository.findAllNames();
-                for (val name : names)
-                {
-                    val updatedService = Service.builder()
-                            .name(name)
-                            .state(State.UNKNOWN)
-                            .build();
-
-                    repository.insertServiceState(updatedService);
-                }
+                repository.findAll().stream()
+                        .filter(service -> service.getState() != State.DOWN)
+                        .map(service -> Service.builder().name(service.getName()).state(State.UNKNOWN).build())
+                        .forEach(repository::insertServiceState);
 
                 queen.run();
             }
