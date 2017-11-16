@@ -189,7 +189,7 @@ public class StateMachine implements Runnable
 
                 centipedeRepository.insertServiceState(Service.builder()
                         .name(name)
-                        .state(State.UNKNOWN)
+                        .state(service.getState() != State.CHANGING ? service.getState() : State.UNKNOWN)
                         .transition(0)
                         .build());
 
@@ -205,7 +205,8 @@ public class StateMachine implements Runnable
             }
             else if (currentTransition == TIMEOUT_TRANSITIONS)
             {
-                log.warn("{} failed to transition to target state {}", name, targetState.name());
+                log.warn("{} failed to transition to target state {}", name, txnTargetState != null ? txnTargetState.name() : targetState.name());
+                centipedeRepository.insertNextServiceTransition(service);
             }
         }
         else
