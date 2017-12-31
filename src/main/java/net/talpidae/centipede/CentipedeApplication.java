@@ -65,7 +65,7 @@ public class CentipedeApplication implements Application
         serverConfig.setRootHandlerWrapper(rootHandlerWrapper);
 
         // disable Jersey, for now
-        serverConfig.setJerseyResourcePackages(new String[0]);
+        serverConfig.clearJerseyResourcePackages();
         try
         {
             server.start();
