@@ -23,7 +23,6 @@ import lombok.ToString;
  */
 @EqualsAndHashCode
 @ToString
-@Builder(toBuilder = true)
 public class Configuration
 {
     private static final long DEFAULT_KEEP_METRICS_MINUTES = TimeUnit.DAYS.toMinutes(3);
@@ -41,11 +40,12 @@ public class Configuration
 
     @Getter
     private final Long keepMetricsMinutes;
-    
+
     @Getter
     private final Boolean isFrozen;
 
 
+    @Builder(toBuilder = true)
     @JsonCreator
     public Configuration(@JsonProperty("environment") @ColumnName("environment") Map<String, String> environment,
                          @JsonProperty("initialServices") @ColumnName("initialServices") List<Service> initialServices,

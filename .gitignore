@@ -1,5 +1,6 @@
 .gradle
 build/
+centipede.db*
 
 *.ipr
 
@@ -25,6 +26,9 @@ build/**
 .idea/**/workspace.xml
 .idea/**/tasks.xml
 .idea/**/modules.xml
+.idea/codeStyles
+.idea/compiler.xml
+.idea/misc.xml
 .idea/dictionaries
 
 # Sensitive or high-churn files:

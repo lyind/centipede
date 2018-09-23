@@ -37,7 +37,6 @@ import lombok.ToString;
 @Getter
 @EqualsAndHashCode
 @ToString
-@Builder(toBuilder = true)
 public class Service
 {
     /**
@@ -113,6 +112,7 @@ public class Service
     private final Integer transition;
 
 
+    @Builder(toBuilder = true)
     @JsonCreator
     public Service(@JsonProperty("generation") @ColumnName("generation") int generation,
                    @JsonProperty("retired") @ColumnName("retired") boolean retired,

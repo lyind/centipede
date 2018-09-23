@@ -17,7 +17,6 @@ import lombok.ToString;
 @Getter
 @EqualsAndHashCode
 @ToString
-@Builder(toBuilder = true)
 public class MetricStatView
 {
     /**
@@ -42,7 +41,8 @@ public class MetricStatView
      */
     private final List<MetricStat> metricStats;
 
-    
+
+    @Builder(toBuilder = true)
     @JsonCreator
     public MetricStatView(@JsonProperty("pathPrefix") @ColumnName("pathPrefix") String pathPrefix,
                           @JsonProperty("begin") @ColumnName("begin") OffsetDateTime begin,

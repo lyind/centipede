@@ -70,6 +70,8 @@ public class CentipedeApplicationModule extends AbstractModule
         bind(Application.class).to(CentipedeApplication.class);
         bind(DefaultDataBaseConfig.class).to(CentipedeDefaultDataBaseConfig.class);
 
+        bind(CentipedeWebSocketEndPoint.class);
+
         bind(Authenticator.class).to(LocalAuthenticator.class);
         bind(SessionService.class).to(LocalSessionService.class);
 

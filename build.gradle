@@ -2,16 +2,16 @@ plugins {
     id 'application'
     id 'idea'
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '2.0.1'
+    id 'com.github.johnrengelman.shadow' version '2.0.4'
 }
 
 group 'net.talpidae'
-version '1'
+version '2'
 
 defaultTasks 'jar'
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+sourceCompatibility = JavaVersion.VERSION_1_10
+targetCompatibility = JavaVersion.VERSION_1_10
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 mainClassName = 'net.talpidae.centipede.CentipedeApplicationModule'
@@ -39,13 +39,14 @@ shadowJar {
 }
 
 dependencies {
-    compileOnly "org.projectlombok:lombok:1.16.16"
+    annotationProcessor "org.projectlombok:lombok:1.16.22"
+    compileOnly "org.projectlombok:lombok:1.16.22"
 
-    compile 'org.xerial:sqlite-jdbc:3.20.0'
-    compile 'net.java.dev.jna:jna:4.5.0'
-    compile 'net.java.dev.jna:jna-platform:4.5.0'
+    compile 'org.xerial:sqlite-jdbc:3.23.1'
+    compile 'net.java.dev.jna:jna:4.5.2'
+    compile 'net.java.dev.jna:jna-platform:4.5.2'
     compile 'org.bigtesting:interpolatd:1.0.0'
 
-    compile 'net.talpidae:base:1'  // or modules/base
+    compile 'net.talpidae:base:2'  // or modules/base
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }

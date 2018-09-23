@@ -19,18 +19,20 @@ package net.talpidae.centipede.service.calls;
 
 import com.google.common.base.Strings;
 import com.google.common.eventbus.EventBus;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.val;
+
 import net.talpidae.base.resource.AuthenticationRequestFilter;
+import net.talpidae.base.util.auth.AuthenticationSecurityContext;
 import net.talpidae.base.util.auth.Authenticator;
 import net.talpidae.base.util.auth.Credentials;
 import net.talpidae.base.util.session.Session;
 import net.talpidae.base.util.session.SessionService;
-import net.talpidae.centipede.bean.Api;
+import net.talpidae.centipede.service.wrapper.Call;
 
 import javax.inject.Inject;
-import java.util.Optional;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.val;
 
 
 @Getter
@@ -56,114 +58,106 @@ public class Security implements CallHandler
     }
 
 
-    private static Api assertAuthenticated(Api request)
+    private static void assertAuthenticated(Call call)
     {
-        val securityContext = request.getContext().getSecurityContext();
-        if (securityContext != null && securityContext.getSession() != null)
+        val securityContext = call.getSecurityContext();
+        if (securityContext == null || securityContext.getSession() == null)
         {
-            return request;
+            throw new AuthenticationException("UNAUTHORIZED");
         }
-
-        throw new AuthenticationException("UNAUTHORIZED");
     }
 
 
-    private Api validateToken(Api request)
+    private void validateToken(Call call)
     {
-        val token = request.getToken();
+        val token = call.getRequest().getToken();
         if (!Strings.isNullOrEmpty(token))
         {
-            val securityContext = authenticationRequestFilter.createSecurityContext(token);
-            if (securityContext != null)
-            {
-                request.getContext().setSecurityContext(securityContext);
-            }
+            call.setSecurityContext(createSecurityContext(token));
         }
-
-        return request;
     }
 
 
-    private Api signin(Api request)
+    private AuthenticationSecurityContext createSecurityContext(String token)
     {
-        if (request.getToken() == null)
-        {
-            return request;
-        }
-
-        val context = request.getContext();
-        if (context.getSecurityContext() != null)
-        {
-            val session = context.getSecurityContext().getSession();
-            if (session != null)
-            {
-                // just return a fresh token (expiry postponed) for the active session
-                request.setToken(authenticator.createToken(session.getId()));
-                request.setCredentials(Credentials.builder().name("ADMIN").build());
-                return request;
-            }
-        }
-
-        // TODO: validate against database
-        val credentials = request.getCredentials();
-        if (credentials != null && "ADMIN".equals(credentials.getName()) && "ADMIN".equals(credentials.getPassword()))
-        {
-            credentials.clear(); // erase PW
-
-            val name = credentials.getName();
-            val session = sessionService.get(null);
-            val attributes = session.getAttributes();
-            attributes.put(Session.ATTRIBUTE_PRINCIPAL, name);
-            attributes.put(Session.ATTRIBUTE_ACCOUNT, "");
-            attributes.put(Session.ATTRIBUTE_ROLES, "admin");
-
-            sessionService.save(session);
-
-            eventBus.post(new SignInEvent(name));
-
-            // return a signed token, which used by AuthenticationRequestFilter to authenticate users
-            request.setToken(authenticator.createToken(session.getId()));
-
-            return validateToken(request);
-        }
-
-        eventBus.post(new SignInFailedEvent((credentials != null) ? credentials.getName() : "null"));
-
-        throw new AuthenticationException("UNAUTHORIZED");
+        return authenticationRequestFilter.createSecurityContext(token);
     }
 
 
-    private Api signout(Api request)
+    private void signin(Call call)
+    {
+        if (call.getRequest().getToken() != null)
+        {
+            if (call.getSecurityContext() != null)
+            {
+                val session = call.getSecurityContext().getSession();
+                if (session != null)
+                {
+                    // just return a fresh token (expiry postponed) for the active session
+                    call.getResponse().token(authenticator.createToken(session.getId()));
+                    call.getResponse().credentials(Credentials.builder().name("ADMIN").build());
+                    return;
+                }
+            }
+
+            // TODO: validate against database
+            val credentials = call.getRequest().getCredentials();
+            if (credentials != null && "ADMIN".equals(credentials.getName()) && "ADMIN".contentEquals(credentials.getPassword()))
+            {
+                credentials.clear(); // erase PW
+
+                val name = credentials.getName();
+                val session = sessionService.get(null);
+                val attributes = session.getAttributes();
+                attributes.put(Session.ATTRIBUTE_PRINCIPAL, name);
+                attributes.put(Session.ATTRIBUTE_ACCOUNT, "");
+                attributes.put(Session.ATTRIBUTE_ROLES, "admin");
+
+                sessionService.save(session);
+
+                eventBus.post(new SignInEvent(name));
+
+                // return a signed token, which used by AuthenticationRequestFilter to authenticate users
+                val token = authenticator.createToken(session.getId());
+                call.setSecurityContext(createSecurityContext(token));
+                call.getResponse().token(token);
+                return;
+            }
+
+            eventBus.post(new SignInFailedEvent((credentials != null) ? credentials.getName() : "null"));
+
+            throw new AuthenticationException("UNAUTHORIZED");
+        }
+    }
+
+
+    private void signout(Call call)
     {
         // authorized but credentials without name -> signout
-        val securityContext = request.getContext().getSecurityContext();
+        val securityContext = call.getSecurityContext();
         if (securityContext != null)
         {
-            val credentials = request.getCredentials();
+            val credentials = call.getRequest().getCredentials();
             if (credentials != null && Strings.isNullOrEmpty(credentials.getName()))
             {
                 sessionService.remove(securityContext.getSessionId());
-                request.getContext().setSecurityContext(null);
+                call.setSecurityContext(null);
 
                 eventBus.post(new SignOutEvent(securityContext.getUserPrincipal().getName()));
 
                 throw new AuthenticationException("UNAUTHORIZED");
             }
         }
-
-        return request;
     }
 
 
     @Override
-    public Api apply(Api request)
+    public void accept(Call call)
     {
-        return Optional.ofNullable(request)
-                .map(this::validateToken)
-                .map(this::signin)
-                .map(Security::assertAuthenticated) // everything after parsing the token/signin requires auth
-                .map(this::signout)
-                .orElse(null);
+        validateToken(call);
+        signin(call);
+        assertAuthenticated(call); // everything after parsing the token/signin requires auth
+        signout(call);
     }
 
 

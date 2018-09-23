@@ -17,6 +17,8 @@
 
 package net.talpidae.centipede.task.init;
 
+import com.google.common.collect.Sets;
+
 import net.talpidae.centipede.bean.configuration.Configuration;
 import net.talpidae.centipede.bean.service.Service;
 import net.talpidae.centipede.bean.service.State;
@@ -26,7 +28,6 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-import jersey.repackaged.com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 

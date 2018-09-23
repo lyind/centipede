@@ -17,7 +17,6 @@
 
 package net.talpidae.centipede.util.session;
 
-import lombok.Getter;
 import net.talpidae.base.util.session.Session;
 import net.talpidae.base.util.session.SessionService;
 
@@ -25,6 +24,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import lombok.Getter;
 
 
 public class LocalSessionService implements SessionService

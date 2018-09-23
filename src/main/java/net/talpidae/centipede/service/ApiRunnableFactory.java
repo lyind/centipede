@@ -22,8 +22,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
+
 import net.talpidae.base.util.auth.AuthenticationSecurityContext;
 import net.talpidae.base.util.queue.Enqueueable;
 import net.talpidae.centipede.bean.Api;
@@ -31,16 +30,26 @@ import net.talpidae.centipede.service.calls.CallException;
 import net.talpidae.centipede.service.calls.CallHandler;
 import net.talpidae.centipede.service.calls.Security;
 import net.talpidae.centipede.service.chain.ChainSender;
+import net.talpidae.centipede.service.wrapper.Call;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
 import javax.websocket.Session;
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 
 
 @Singleton
@@ -53,7 +62,7 @@ public class ApiRunnableFactory
 
     private final static String SESSION_CHAIN_SENDER_KEY = ApiRunnableFactory.log.getName() + "-chain-sender";
 
-    private final List<CallHandler> apiFunctionsByPhase;
+    private final List<CallHandler> handlersByPhase;
 
     private final ObjectReader apiReader;
 
@@ -67,10 +76,10 @@ public class ApiRunnableFactory
     @Inject
     public ApiRunnableFactory(ObjectMapper objectMapper, Set<CallHandler> apiFunctions, ApiBroadcastQueue apiBroadcastQueue)
     {
-        this.apiFunctionsByPhase = new ArrayList<>(apiFunctions);
+        this.handlersByPhase = new ArrayList<>(apiFunctions);
 
         // important, sort the calls by phase to allow for some order (authentication first and things like that...)
-        this.apiFunctionsByPhase.sort(Comparator.comparing(CallHandler::getPhase));
+        this.handlersByPhase.sort(Comparator.comparing(CallHandler::getPhase));
 
         this.apiReader = objectMapper.readerFor(Api.class);
         this.apiWriter = objectMapper.writerFor(Api.class);
@@ -261,42 +270,40 @@ public class ApiRunnableFactory
 
     private void processRequest(Session session, Api request)
     {
-        Api result = request;
+        // security context is restored (if already available)
+        val call = new Call(request, getSessionSecurityContext(session));
         try
         {
-            // restore security context
-            result.getContext().setSecurityContext(getSessionSecurityContext(session));
-
-            for (val function : apiFunctionsByPhase)
+            if (request != null)
             {
-                val modifiedResult = function.apply(result);
-                if (modifiedResult == null)
-                    break;
-
-                result = modifiedResult;
+                handlersByPhase.forEach(handler -> handler.accept(call));
+            }
+            else
+            {
+                call.getResponse().error("request is null");
             }
         }
         catch (Security.AuthenticationException e)
         {
             log.debug("session: {}: {}", session.getId(), e.getMessage());
-            result.setToken("");
-            result.setError(e.getMessage());
+            call.getResponse().token("");
+            call.getResponse().error(e.getMessage());
         }
         catch (CallException e)
         {
             log.warn("processing API request from session: {}: {}", session.getId(), e.getMessage());
-            result.setError(e.getMessage());
+            call.getResponse().error(e.getMessage());
         }
         catch (RuntimeException e)
         {
             log.error("error handling API request for session: {}: {}", session.getId(), e.getMessage(), e);
-            result.setError("INTERNAL_SERVER_ERROR");
+            call.getResponse().error("INTERNAL_SERVER_ERROR");
         }
 
         // save security context
-        setSessionSecurityContext(session, result.getContext().getSecurityContext());
+        setSessionSecurityContext(session, call.getSecurityContext());
 
-        sendResponse(session, result);
+        sendResponse(session, call.getResponse().build());
     }
 
     private long getSessionEventOffset(Session session)

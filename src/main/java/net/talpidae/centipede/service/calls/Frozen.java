@@ -20,9 +20,9 @@ package net.talpidae.centipede.service.calls;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 
-import net.talpidae.centipede.bean.Api;
 import net.talpidae.centipede.bean.frozen.FrozenState;
 import net.talpidae.centipede.event.Freezing;
+import net.talpidae.centipede.service.wrapper.Call;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -54,9 +54,10 @@ public class Frozen implements CallHandler
 
 
     @Override
-    public Api apply(Api request)
+    public void accept(Call call)
     {
-        if (request != null && request.getFrozen() != null)
+        val request = call.getRequest();
+        if (request.getFrozen() != null)
         {
             val frozenState = request.getFrozen();
             if (!frozenState.equals(FrozenState.UNKNOWN))
@@ -65,10 +66,8 @@ public class Frozen implements CallHandler
             }
 
             // updates are propagated asynchronously
-            request.setFrozen(isFrozen.get() ? FrozenState.TRUE : FrozenState.FALSE);
+            call.getResponse().frozen(isFrozen.get() ? FrozenState.TRUE : FrozenState.FALSE);
         }
-
-        return request;
     }
 
 

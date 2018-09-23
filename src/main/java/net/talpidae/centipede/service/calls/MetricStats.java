@@ -17,8 +17,8 @@
 
 package net.talpidae.centipede.service.calls;
 
-import net.talpidae.centipede.bean.Api;
 import net.talpidae.centipede.database.CentipedeRepository;
+import net.talpidae.centipede.service.wrapper.Call;
 
 import java.time.OffsetDateTime;
 
@@ -46,9 +46,10 @@ public class MetricStats implements CallHandler
 
 
     @Override
-    public Api apply(Api request)
+    public void accept(Call call)
     {
-        if (request != null && request.getMetricStats() != null)
+        val request = call.getRequest();
+        if (request.getMetricStats() != null)
         {
             val metricStatView = request.getMetricStats();
             val pathPrefix = metricStatView.getPathPrefix();  // null -> no filtering by path
@@ -70,9 +71,7 @@ public class MetricStats implements CallHandler
             }
 
             // fulfill metrics request
-            request.setMetricStats(builder.build());
+            call.getResponse().metricStats(builder.build());
         }
-
-        return request;
     }
 }

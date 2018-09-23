@@ -16,7 +16,6 @@ import lombok.ToString;
 @Getter
 @EqualsAndHashCode
 @ToString
-@Builder
 public class Dependency
 {
     private final String source;
@@ -28,6 +27,7 @@ public class Dependency
     private final State targetState;
 
 
+    @Builder
     @JsonCreator
     public Dependency(@JsonProperty("source") @ColumnName("source") String source,
                       @JsonProperty("target") @ColumnName("target") String target,

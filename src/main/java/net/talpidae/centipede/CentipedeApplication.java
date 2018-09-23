@@ -64,8 +64,6 @@ public class CentipedeApplication implements Application
         // (enables browser history support)
         serverConfig.setRootHandlerWrapper(rootHandlerWrapper);
 
-        // disable Jersey, for now
-        serverConfig.clearJerseyResourcePackages();
         try
         {
             server.start();

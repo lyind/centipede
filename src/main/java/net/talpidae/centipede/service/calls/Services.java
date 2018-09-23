@@ -18,16 +18,19 @@
 package net.talpidae.centipede.service.calls;
 
 import com.google.common.eventbus.EventBus;
-import lombok.Getter;
-import lombok.val;
-import net.talpidae.centipede.bean.Api;
+
 import net.talpidae.centipede.database.CentipedeRepository;
 import net.talpidae.centipede.event.ServicesModified;
+import net.talpidae.centipede.service.wrapper.Call;
+
+import java.util.ArrayList;
+import java.util.Collections;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.ArrayList;
-import java.util.Collections;
+
+import lombok.Getter;
+import lombok.val;
 
 
 @Getter
@@ -50,9 +53,10 @@ public class Services implements CallHandler
 
 
     @Override
-    public Api apply(Api request)
+    public void accept(Call call)
     {
-        if (request != null && request.getServices() != null)
+        val request = call.getRequest();
+        if (request.getServices() != null)
         {
             val serviceIterator = request.getServices().iterator();
 
@@ -71,16 +75,12 @@ public class Services implements CallHandler
                 }
 
                 eventBus.post(new ServicesModified(Collections.unmodifiableList(names)));
-
-                request.setServices(null);
             }
             else
             {
                 // fulfill list request
-                request.setServices(centipedeRepository.findAll());
+                call.getResponse().services(centipedeRepository.findAll());
             }
         }
-
-        return request;
     }
 }

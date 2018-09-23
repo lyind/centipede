@@ -17,16 +17,19 @@
 
 package net.talpidae.centipede.bean;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import net.talpidae.base.util.auth.Credentials;
 import net.talpidae.centipede.bean.dependency.Dependency;
 import net.talpidae.centipede.bean.frozen.FrozenState;
 import net.talpidae.centipede.bean.metric.MetricStatView;
 import net.talpidae.centipede.bean.service.Service;
-import net.talpidae.centipede.service.wrapper.CallContext;
 
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.Setter;
+import lombok.ToString;
 
 
 /**
@@ -35,53 +38,69 @@ import lombok.Setter;
  * Think of top-level members of Api as subjects.
  */
 @Getter
-@Setter
-@Builder
+@EqualsAndHashCode
+@ToString
 public class Api
 {
     /**
-     * Request context. Only interesting while an event is processed.
-     */
-    //@Builder.Default
-    private final transient CallContext context = new CallContext();
-
-    /**
      * Authentication token.
      */
-    private String token;
+    private final String token;
 
     /**
      * User credentials, ask server to perform authentication and return a valid token.
      */
-    private Credentials credentials;
+    private final Credentials credentials;
 
     /**
      * Main topic, manage services.
      */
-    private Iterable<Service> services;
+    private final Iterable<Service> services;
 
     /**
      * List dependencies between services (by service name).
      */
-    private Iterable<Dependency> dependencies;
+    private final Iterable<Dependency> dependencies;
 
     /**
      * Metrics query and result.
      */
-    private MetricStatView metricStats;
+    private final MetricStatView metricStats;
 
     /**
      * Error message from the server to the client.
      */
-    private String error;
+    private final String error;
 
     /**
      * Indicates broadcast queue overflow.
      */
-    private Boolean overflow;
+    private final Boolean overflow;
 
     /**
      * Is the state machine frozen (no services start/stop allowed)?
      */
-    private FrozenState frozen;
+    private final FrozenState frozen;
+
+
+    @Builder(toBuilder = true)
+    @JsonCreator
+    private Api(@JsonProperty("token") String token,
+                @JsonProperty("credentials") Credentials credentials,
+                @JsonProperty("services") Iterable<Service> services,
+                @JsonProperty("dependencies") Iterable<Dependency> dependencies,
+                @JsonProperty("metricStats") MetricStatView metricStats,
+                @JsonProperty("error") String error,
+                @JsonProperty("overflow") Boolean overflow,
+                @JsonProperty("frozen") FrozenState frozen)
+    {
+        this.token = token;
+        this.credentials = credentials;
+        this.services = services;
+        this.dependencies = dependencies;
+        this.metricStats = metricStats;
+        this.error = error;
+        this.overflow = overflow;
+        this.frozen = frozen;
+    }
 }

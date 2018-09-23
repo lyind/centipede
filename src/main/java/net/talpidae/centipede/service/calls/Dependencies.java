@@ -17,8 +17,8 @@
 
 package net.talpidae.centipede.service.calls;
 
-import net.talpidae.centipede.bean.Api;
 import net.talpidae.centipede.database.CentipedeRepository;
+import net.talpidae.centipede.service.wrapper.Call;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -42,14 +42,12 @@ public class Dependencies implements CallHandler
 
 
     @Override
-    public Api apply(Api request)
+    public void accept(Call call)
     {
-        if (request != null && request.getDependencies() != null)
+        if (call.getRequest().getDependencies() != null)
         {
             // fulfill dependencies request
-            request.setDependencies(centipedeRepository.findAllDependencies());
+            call.getResponse().dependencies(centipedeRepository.findAllDependencies());
         }
-
-        return request;
     }
 }

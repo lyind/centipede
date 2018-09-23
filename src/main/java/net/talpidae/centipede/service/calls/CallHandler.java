@@ -17,15 +17,15 @@
 
 package net.talpidae.centipede.service.calls;
 
-import net.talpidae.centipede.bean.Api;
+import net.talpidae.centipede.service.wrapper.Call;
 
-import java.util.function.Function;
+import java.util.function.Consumer;
 
 
 /**
  * Every service needs to implement this.
  */
-public interface CallHandler extends Function<Api, Api>
+public interface CallHandler extends Consumer<Call>
 {
     Phase getPhase();
 }

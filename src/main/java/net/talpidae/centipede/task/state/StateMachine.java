@@ -45,7 +45,7 @@ import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
-import static com.google.common.base.Objects.firstNonNull;
+import static com.google.common.base.MoreObjects.firstNonNull;
 
 
 @Slf4j
