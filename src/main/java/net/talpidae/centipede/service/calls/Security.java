@@ -61,7 +61,7 @@ public class Security implements CallHandler
     private static void assertAuthenticated(Call call)
     {
         val securityContext = call.getSecurityContext();
-        if (securityContext == null || securityContext.getSession() == null)
+        if (securityContext == null || securityContext.getUserPrincipal() == null)
         {
             throw new AuthenticationException("UNAUTHORIZED");
         }
@@ -88,9 +88,9 @@ public class Security implements CallHandler
     {
         if (call.getRequest().getToken() != null)
         {
-            if (call.getSecurityContext() != null)
+            if (call.getSecurityContext() != null && call.getSecurityContext().getUserPrincipal() != null)
             {
-                val session = call.getSecurityContext().getSession();
+                val session = call.getSecurityContext().getUserPrincipal().getSession();
                 if (session != null)
                 {
                     // just return a fresh token (expiry postponed) for the active session
@@ -140,10 +140,15 @@ public class Security implements CallHandler
             val credentials = call.getRequest().getCredentials();
             if (credentials != null && Strings.isNullOrEmpty(credentials.getName()))
             {
-                sessionService.remove(securityContext.getSessionId());
-                call.setSecurityContext(null);
+                val principal = securityContext.getUserPrincipal();
+                if (principal != null)
+                {
+                    sessionService.remove(principal.getSessionId().toString());
 
-                eventBus.post(new SignOutEvent(securityContext.getUserPrincipal().getName()));
+                    eventBus.post(new SignOutEvent(principal.getName()));
+                }
+
+                call.setSecurityContext(null);
 
                 throw new AuthenticationException("UNAUTHORIZED");
             }
