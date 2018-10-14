@@ -39,17 +39,14 @@ import javax.inject.Singleton;
 @Singleton
 public class CentipedeSyncQueen extends SyncQueen
 {
-    private final EventBus eventBus;
-
     private final ServerConfig serverConfig;
 
 
     @Inject
     public CentipedeSyncQueen(QueenSettings settings, ServerConfig serverConfig, EventBus eventBus)
     {
-        super(settings);
+        super(settings, eventBus);
 
-        this.eventBus = eventBus;
         this.serverConfig = serverConfig;
     }
 
@@ -71,7 +68,7 @@ public class CentipedeSyncQueen extends SyncQueen
         // update DB state
         if (isNewMapping)
         {
-            eventBus.post(new NewMapping(state, mapping));
+            getEventBus().post(new NewMapping(state, mapping));
         }
     }
 
@@ -79,20 +76,20 @@ public class CentipedeSyncQueen extends SyncQueen
     @Override
     protected void handleTimeout(InsectState timedOutState)
     {
-        eventBus.post(new ServiceTimedOut(timedOutState));
+        getEventBus().post(new ServiceTimedOut(timedOutState));
     }
 
 
     @Override
     protected void handleDependenciesChanged(InsectState insectState)
     {
-        eventBus.post(new DependenciesChanged(insectState.getName(), insectState.getDependencies()));
+        getEventBus().post(new DependenciesChanged(insectState.getName(), insectState.getDependencies()));
     }
 
 
     @Override
     protected void handleMetrics(Metrics metrics)
     {
-        eventBus.post(new NewMetrics(metrics.getMetrics()));
+        getEventBus().post(new NewMetrics(metrics.getMetrics()));
     }
 }
