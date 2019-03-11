@@ -39,10 +39,10 @@ shadowJar {
 }
 
 dependencies {
-    annotationProcessor "org.projectlombok:lombok:1.16.22"
-    compileOnly "org.projectlombok:lombok:1.16.22"
+    annotationProcessor "org.projectlombok:lombok:1.18.2"
+    compileOnly "org.projectlombok:lombok:1.18.2"
 
-    compile 'org.xerial:sqlite-jdbc:3.23.1'
+    compile 'org.xerial:sqlite-jdbc:3.25.2'
     compile 'net.java.dev.jna:jna:4.5.2'
     compile 'net.java.dev.jna:jna-platform:4.5.2'
     compile 'org.bigtesting:interpolatd:1.0.0'
